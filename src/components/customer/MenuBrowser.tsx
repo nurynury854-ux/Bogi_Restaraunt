@@ -6,11 +6,13 @@ import { ChevronLeft } from "lucide-react";
 import type { MenuCategory, MenuItem } from "@/generated/prisma/client";
 import { useOrderStore } from "@/lib/store/orderStore";
 import { DINING_METHOD_LABEL } from "@/lib/constants";
-import { useEventStream } from "@/lib/hooks/useEventStream";
+import { usePolling } from "@/lib/hooks/usePolling";
 import { MenuItemRow } from "@/components/customer/MenuItemRow";
 import { CartWidget } from "@/components/customer/cart/CartWidget";
 
 type CategoryWithItems = MenuCategory & { items: MenuItem[] };
+
+const MENU_POLL_INTERVAL_MS = 8000;
 
 export function MenuBrowser({
   categories: initialCategories,
@@ -27,15 +29,15 @@ export function MenuBrowser({
   const [activeCategory, setActiveCategory] = useState(initialCategories[0]?.id ?? "");
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
-  // Menu availability toggles from the admin backend show up here immediately.
-  useEventStream({
-    "menu:changed": () => {
-      fetch("/api/menu/public")
-        .then((res) => res.json())
-        .then((data: { categories: CategoryWithItems[] }) => setCategories(data.categories))
-        .catch(() => null);
-    },
-  });
+  // Menu availability toggles from the admin backend show up here automatically:
+  // re-read the public menu every few seconds so an item taken offline (or put
+  // back) reflects without the customer refreshing.
+  usePolling(() => {
+    fetch("/api/menu/public")
+      .then((res) => res.json())
+      .then((data: { categories: CategoryWithItems[] }) => setCategories(data.categories))
+      .catch(() => null);
+  }, MENU_POLL_INTERVAL_MS);
 
   useEffect(() => {
     // See useCheckoutGuard for why rehydration is triggered manually here

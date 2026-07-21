@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useRef, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import type { SerializedTimeSlot } from "@/lib/types";
 import { TIME_SLOT_METHODS, type TimeSlotMethod } from "@/lib/constants";
-import { useEventStream } from "@/lib/hooks/useEventStream";
+import { usePolling } from "@/lib/hooks/usePolling";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Field";
@@ -15,6 +14,8 @@ const METHOD_LABEL: Record<TimeSlotMethod, string> = {
   DELIVERY: "外送時段",
 };
 
+const POLL_INTERVAL_MS = 10000;
+
 export function TimeSlotManager({
   branchId,
   initialSlots,
@@ -22,18 +23,30 @@ export function TimeSlotManager({
   branchId: string;
   initialSlots: SerializedTimeSlot[];
 }) {
-  const router = useRouter();
+  const [slots, setSlots] = useState(initialSlots);
   const [newLabels, setNewLabels] = useState<Record<TimeSlotMethod, string>>({
     PICKUP: "",
     DELIVERY: "",
   });
   const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
+  busyRef.current = busy;
 
-  useEventStream({
-    "timeslot:changed": (payload: { branchId: string }) => {
-      if (payload.branchId === branchId) router.refresh();
-    },
-  });
+  const refresh = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/timeslots?branchId=${branchId}&all=1`);
+      if (!res.ok) return;
+      const data: { slots: SerializedTimeSlot[] } = await res.json();
+      setSlots(data.slots ?? []);
+    } catch {
+      // ignore transient network errors
+    }
+  }, [branchId]);
+
+  // Pick up slot changes made from another tab/device.
+  usePolling(() => {
+    if (!busyRef.current) refresh();
+  }, POLL_INTERVAL_MS);
 
   async function addSlot(method: TimeSlotMethod) {
     const label = newLabels[method].trim();
@@ -47,12 +60,11 @@ export function TimeSlotManager({
           branchId,
           method,
           label,
-          sortOrder: initialSlots.filter((s) => s.branchId === branchId && s.method === method)
-            .length,
+          sortOrder: slots.filter((s) => s.method === method).length,
         }),
       });
       setNewLabels((prev) => ({ ...prev, [method]: "" }));
-      router.refresh();
+      await refresh();
     } finally {
       setBusy(false);
     }
@@ -66,7 +78,7 @@ export function TimeSlotManager({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive: !slot.isActive }),
       });
-      router.refresh();
+      await refresh();
     } finally {
       setBusy(false);
     }
@@ -77,7 +89,7 @@ export function TimeSlotManager({
     setBusy(true);
     try {
       await fetch(`/api/timeslots/${id}`, { method: "DELETE" });
-      router.refresh();
+      await refresh();
     } finally {
       setBusy(false);
     }
@@ -86,19 +98,19 @@ export function TimeSlotManager({
   return (
     <div className="grid gap-5 sm:grid-cols-2">
       {TIME_SLOT_METHODS.map((method) => {
-        const slots = initialSlots
+        const methodSlots = slots
           .filter((s) => s.method === method)
           .sort((a, b) => a.sortOrder - b.sortOrder);
         return (
           <Card key={method} className="flex flex-col gap-3 p-5">
             <h2 className="font-semibold text-ink-900">{METHOD_LABEL[method]}</h2>
 
-            {slots.length === 0 && (
+            {methodSlots.length === 0 && (
               <p className="py-3 text-center text-sm text-ink-400">尚未設定時段</p>
             )}
 
             <ul className="flex flex-col gap-2">
-              {slots.map((slot) => (
+              {methodSlots.map((slot) => (
                 <li
                   key={slot.id}
                   className="flex items-center justify-between rounded-xl border border-ink-100 bg-cream-50 px-3.5 py-2.5"

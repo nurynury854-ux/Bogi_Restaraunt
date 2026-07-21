@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { SerializedMenuCategory, SerializedMenuItem } from "@/lib/types";
-import { useEventStream } from "@/lib/hooks/useEventStream";
+import { usePolling } from "@/lib/hooks/usePolling";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { ToggleSwitch } from "@/components/ui/ToggleSwitch";
+
+const POLL_INTERVAL_MS = 10000;
 
 export function MenuAvailabilityList({
   initialCategories,
@@ -14,11 +16,15 @@ export function MenuAvailabilityList({
 }) {
   const [categories, setCategories] = useState(initialCategories);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const busyIdRef = useRef<string | null>(null);
+  busyIdRef.current = busyId;
 
-  // If the menu is edited from another tab/device, refresh this list too.
-  useEventStream({
-    "menu:changed": () => refresh(),
-  });
+  // If the menu is toggled from another tab/device, this list picks it up.
+  // Skip while a local toggle is in flight so a poll can't clobber it.
+  usePolling(() => {
+    if (busyIdRef.current) return;
+    refresh();
+  }, POLL_INTERVAL_MS);
 
   function refresh() {
     fetch("/api/menu")

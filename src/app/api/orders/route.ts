@@ -4,7 +4,7 @@ import { requireAdminSession } from "@/lib/adminAuth";
 import { handleApiError } from "@/lib/apiResponse";
 import { createOrderSchema } from "@/lib/validation";
 import { generateOrderNumber } from "@/lib/orderNumber";
-import { publish } from "@/lib/eventBus";
+import { PENDING_STATUSES, COMPLETED_STATUSES } from "@/lib/constants";
 
 export async function POST(request: NextRequest) {
   try {
@@ -75,8 +75,6 @@ export async function POST(request: NextRequest) {
       include: { items: true, branch: true, timeSlot: true },
     });
 
-    publish("order:new", order);
-
     return NextResponse.json({ order }, { status: 201 });
   } catch (error) {
     return handleApiError(error);
@@ -89,17 +87,26 @@ export async function GET(request: NextRequest) {
     const params = request.nextUrl.searchParams;
     const branchId = params.get("branchId");
     const status = params.get("status");
+    const bucket = params.get("bucket"); // "pending" | "completed"
     const diningMethod = params.get("diningMethod");
+
+    const bucketStatuses =
+      bucket === "pending"
+        ? PENDING_STATUSES
+        : bucket === "completed"
+          ? COMPLETED_STATUSES
+          : null;
 
     const orders = await prisma.order.findMany({
       where: {
         ...(branchId ? { branchId } : {}),
+        ...(bucketStatuses ? { status: { in: bucketStatuses } } : {}),
         ...(status ? { status } : {}),
         ...(diningMethod ? { diningMethod } : {}),
       },
       include: { items: true, branch: true, timeSlot: true },
       orderBy: { createdAt: "desc" },
-      take: 200,
+      take: 300,
     });
 
     return NextResponse.json({ orders });

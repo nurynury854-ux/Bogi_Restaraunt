@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/adminAuth";
 import { handleApiError } from "@/lib/apiResponse";
 import { categoryUpdateSchema } from "@/lib/validation";
-import { publish } from "@/lib/eventBus";
 
 export async function PATCH(
   request: NextRequest,
@@ -15,7 +14,6 @@ export async function PATCH(
     const body = await request.json();
     const data = categoryUpdateSchema.parse(body);
     const category = await prisma.menuCategory.update({ where: { id }, data });
-    publish("menu:changed", {});
     return NextResponse.json({ category });
   } catch (error) {
     return handleApiError(error);
@@ -37,7 +35,6 @@ export async function DELETE(
       );
     }
     await prisma.menuCategory.delete({ where: { id } });
-    publish("menu:changed", {});
     return NextResponse.json({ ok: true });
   } catch (error) {
     return handleApiError(error);

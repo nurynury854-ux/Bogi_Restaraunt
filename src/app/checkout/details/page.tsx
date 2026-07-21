@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import type { TimeSlot } from "@/generated/prisma/client";
 import { useCheckoutGuard } from "@/lib/hooks/useCheckoutGuard";
 import { useOrderStore } from "@/lib/store/orderStore";
-import { useEventStream } from "@/lib/hooks/useEventStream";
+import { usePolling } from "@/lib/hooks/usePolling";
 import { OrderSummary } from "@/components/customer/checkout/OrderSummary";
 import { FieldWrapper, Input, Select, Textarea } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
+
+const SLOT_POLL_INTERVAL_MS = 8000;
 
 export default function CheckoutDetailsPage() {
   const ready = useCheckoutGuard({ requireCart: true });
@@ -53,13 +55,11 @@ export default function CheckoutDetailsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, needsSlot, branchId, slotMethod]);
 
-  useEventStream({
-    "timeslot:changed": (payload: { branchId: string; method: string }) => {
-      if (payload.branchId === branchId && payload.method === slotMethod) {
-        refetchSlots();
-      }
-    },
-  });
+  // Keep the slot list live: if the admin adds/removes a slot for this branch
+  // while the customer is on this screen, it reflects within a few seconds.
+  usePolling(() => {
+    if (ready && needsSlot) refetchSlots();
+  }, SLOT_POLL_INTERVAL_MS);
 
   if (!ready) {
     return <div className="flex flex-1 items-center justify-center text-ink-400">載入中...</div>;

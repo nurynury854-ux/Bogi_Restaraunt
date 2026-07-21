@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/adminAuth";
 import { handleApiError } from "@/lib/apiResponse";
 import { updateOrderStatusSchema } from "@/lib/validation";
-import { publish } from "@/lib/eventBus";
 
 export async function GET(
   _request: NextRequest,
@@ -39,7 +38,6 @@ export async function PATCH(
       data: { status: data.status },
       include: { items: true, branch: true, timeSlot: true },
     });
-    publish("order:updated", order);
     return NextResponse.json({ order });
   } catch (error) {
     return handleApiError(error);

@@ -3,8 +3,10 @@
 import { useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Bell, BellOff, PartyPopper } from "lucide-react";
-import { useEventStream } from "@/lib/hooks/useEventStream";
+import { usePolling } from "@/lib/hooks/usePolling";
 import type { SerializedOrder } from "@/lib/types";
+
+const POLL_INTERVAL_MS = 5000;
 
 function playBeep(ctx: AudioContext) {
   if (ctx.state === "suspended") ctx.resume();
@@ -27,11 +29,28 @@ export function NewOrderNotifier({ branchId }: { branchId: string }) {
   const soundOnRef = useRef(soundOn);
   soundOnRef.current = soundOn;
   const audioCtxRef = useRef<AudioContext | null>(null);
+  // Order IDs we've already seen. `null` until the first poll establishes a
+  // baseline, so existing pending orders on page load don't trigger alerts.
+  const seenIdsRef = useRef<Set<string> | null>(null);
 
-  useEventStream({
-    "order:new": (order: SerializedOrder) => {
-      if (order.branchId !== branchId) return;
-      setToasts((prev) => [order, ...prev].slice(0, 4));
+  usePolling(async () => {
+    try {
+      const res = await fetch(`/api/orders?branchId=${branchId}&bucket=pending`);
+      if (!res.ok) return;
+      const data: { orders: SerializedOrder[] } = await res.json();
+      const orders = data.orders ?? [];
+
+      if (seenIdsRef.current === null) {
+        seenIdsRef.current = new Set(orders.map((o) => o.id));
+        return;
+      }
+
+      const fresh = orders.filter((o) => !seenIdsRef.current!.has(o.id));
+      if (fresh.length === 0) return;
+
+      fresh.forEach((o) => seenIdsRef.current!.add(o.id));
+      setToasts((prev) => [...fresh, ...prev].slice(0, 4));
+
       if (soundOnRef.current) {
         if (!audioCtxRef.current) {
           const Ctor =
@@ -42,11 +61,16 @@ export function NewOrderNotifier({ branchId }: { branchId: string }) {
         }
         playBeep(audioCtxRef.current);
       }
-      setTimeout(() => {
-        setToasts((prev) => prev.filter((o) => o.id !== order.id));
-      }, 6000);
-    },
-  });
+
+      fresh.forEach((order) => {
+        setTimeout(() => {
+          setToasts((prev) => prev.filter((o) => o.id !== order.id));
+        }, 6000);
+      });
+    } catch {
+      // ignore transient network errors
+    }
+  }, POLL_INTERVAL_MS);
 
   function toggleSound() {
     if (!audioCtxRef.current) {

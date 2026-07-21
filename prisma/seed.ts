@@ -1,11 +1,9 @@
 import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 
-const adapter = new PrismaBetterSqlite3({
-  url: process.env.DATABASE_URL ?? "file:./dev.db",
-});
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
 // NOTE: prices below are PLACEHOLDERS — the owner sent item names/categories
@@ -120,29 +118,32 @@ async function main() {
     )
   );
 
-  // Full menu replacement: clear out whatever categories/items exist
-  // (e.g. from an earlier placeholder seed) before loading the real menu.
-  await prisma.menuItem.deleteMany({});
-  await prisma.menuCategory.deleteMany({});
-
-  for (let i = 0; i < CATEGORY_ORDER.length; i++) {
-    const categoryName = CATEGORY_ORDER[i];
-    const category = await prisma.menuCategory.create({
-      data: { name: categoryName, sortOrder: i },
-    });
-
-    const items = CATEGORY_ITEMS[categoryName];
-    for (let j = 0; j < items.length; j++) {
-      const item = items[j];
-      await prisma.menuItem.create({
-        data: {
-          categoryId: category.id,
-          name: item.name,
-          price: item.price,
-          description: item.description,
-          sortOrder: j,
-        },
+  // Only populate the menu when the database has none yet. This makes the seed
+  // safe to run on every deploy (e.g. from the Vercel build) without ever
+  // wiping the admin's availability toggles or any live data.
+  const existingItemCount = await prisma.menuItem.count();
+  if (existingItemCount === 0) {
+    for (let i = 0; i < CATEGORY_ORDER.length; i++) {
+      const categoryName = CATEGORY_ORDER[i];
+      const category = await prisma.menuCategory.upsert({
+        where: { name: categoryName },
+        update: { sortOrder: i },
+        create: { name: categoryName, sortOrder: i },
       });
+
+      const items = CATEGORY_ITEMS[categoryName];
+      for (let j = 0; j < items.length; j++) {
+        const item = items[j];
+        await prisma.menuItem.create({
+          data: {
+            categoryId: category.id,
+            name: item.name,
+            price: item.price,
+            description: item.description,
+            sortOrder: j,
+          },
+        });
+      }
     }
   }
 

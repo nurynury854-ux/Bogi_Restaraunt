@@ -1,18 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { UtensilsCrossed, ShoppingBag, Bike } from "lucide-react";
 import type { SerializedOrder } from "@/lib/types";
 import {
   DINING_METHODS,
   DINING_METHOD_LABEL,
-  PENDING_STATUSES,
-  COMPLETED_STATUSES,
   type DiningMethod,
-  type OrderStatus,
 } from "@/lib/constants";
 import { groupOrdersByDate } from "@/lib/orderGrouping";
-import { useEventStream } from "@/lib/hooks/useEventStream";
+import { usePolling } from "@/lib/hooks/usePolling";
 import { OrderCard } from "@/components/admin/orders/OrderCard";
 
 const METHOD_ICON: Record<DiningMethod, typeof UtensilsCrossed> = {
@@ -20,6 +17,8 @@ const METHOD_ICON: Record<DiningMethod, typeof UtensilsCrossed> = {
   PICKUP: ShoppingBag,
   DELIVERY: Bike,
 };
+
+const POLL_INTERVAL_MS = 4000;
 
 export function OrdersBoard({
   mode,
@@ -33,27 +32,28 @@ export function OrdersBoard({
   const [orders, setOrders] = useState(initialOrders);
   const [activeMethod, setActiveMethod] = useState<DiningMethod>("DINE_IN");
   const [busyId, setBusyId] = useState<string | null>(null);
+  // IDs the acting admin just moved out of this board optimistically; ignore
+  // them on the next poll or two so they don't briefly reappear before the DB
+  // read catches up.
+  const removedIdsRef = useRef<Set<string>>(new Set());
 
-  const relevantStatuses: OrderStatus[] = mode === "pending" ? PENDING_STATUSES : COMPLETED_STATUSES;
-
-  useEventStream({
-    "order:new": (order: SerializedOrder) => {
-      if (order.branchId !== branchId) return;
-      if (!relevantStatuses.includes(order.status as OrderStatus)) return;
-      setOrders((prev) => (prev.some((o) => o.id === order.id) ? prev : [order, ...prev]));
-    },
-    "order:updated": (order: SerializedOrder) => {
-      if (order.branchId !== branchId) return;
-      const belongsHere = relevantStatuses.includes(order.status as OrderStatus);
-      setOrders((prev) => {
-        const exists = prev.some((o) => o.id === order.id);
-        if (belongsHere) {
-          return exists ? prev.map((o) => (o.id === order.id ? order : o)) : [order, ...prev];
-        }
-        return exists ? prev.filter((o) => o.id !== order.id) : prev;
+  usePolling(async () => {
+    try {
+      const res = await fetch(`/api/orders?branchId=${branchId}&bucket=${mode}`);
+      if (!res.ok) return;
+      const data: { orders: SerializedOrder[] } = await res.json();
+      const fresh = (data.orders ?? []).filter((o) => !removedIdsRef.current.has(o.id));
+      // Once the server no longer returns a removed id in *this* bucket, we can
+      // stop suppressing it.
+      const freshIds = new Set(fresh.map((o) => o.id));
+      removedIdsRef.current.forEach((id) => {
+        if (!freshIds.has(id)) removedIdsRef.current.delete(id);
       });
-    },
-  });
+      setOrders(fresh);
+    } catch {
+      // ignore transient network errors
+    }
+  }, POLL_INTERVAL_MS);
 
   async function updateStatus(orderId: string, status: "COMPLETED" | "CANCELLED") {
     setBusyId(orderId);
@@ -65,7 +65,8 @@ export function OrdersBoard({
       });
       if (res.ok && mode === "pending") {
         // Update immediately for the admin who took the action; other open
-        // tabs/devices pick up the same change a moment later via SSE.
+        // tabs/devices pick up the same change on their next poll.
+        removedIdsRef.current.add(orderId);
         setOrders((prev) => prev.filter((o) => o.id !== orderId));
       }
     } finally {

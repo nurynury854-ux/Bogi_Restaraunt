@@ -1,6 +1,6 @@
-// 福福早餐店 online ordering demo — Prisma schema (SQLite)
-// Note: SQLite has no native enum support, so status/method-style fields are
-// plain Strings; allowed values are enforced in the app layer (Zod + TS union types).
+// 福福早餐店 online ordering demo — Prisma schema (PostgreSQL)
+// Status/method-style fields are plain Strings; allowed values are enforced in
+// the app layer (Zod + TS union types) to keep the model simple and portable.
 
 generator client {
   provider = "prisma-client"
@@ -8,7 +8,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 model Branch {
