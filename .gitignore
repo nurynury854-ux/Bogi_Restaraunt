@@ -1,0 +1,48 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# prisma
+/src/generated/prisma
+/dev.db
+/dev.db-journal
+/prisma/dev.db
+/prisma/dev.db-journal
+
+# AI coding assistant skill docs auto-installed by `prisma init` (local
+# tooling reference, not part of the app)
+/.claude/skills
+/.agents
+/.windsurf
+skills-lock.json

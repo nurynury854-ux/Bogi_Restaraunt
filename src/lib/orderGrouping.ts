@@ -1,0 +1,71 @@
+import type { SerializedOrder } from "@/lib/types";
+
+export interface OrderDateGroup {
+  dateKey: string;
+  label: string;
+  orders: SerializedOrder[];
+}
+
+const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
+
+function dateKeyOfDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function dateKeyOfIso(iso: string): string {
+  return dateKeyOfDate(new Date(iso));
+}
+
+function labelFor(dateKey: string): string {
+  const now = new Date();
+  const todayKey = dateKeyOfDate(now);
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const yesterdayKey = dateKeyOfDate(yesterday);
+
+  const [y, m, d] = dateKey.split("-").map(Number);
+  const dateObj = new Date(y, m - 1, d);
+  const md = `${m}月${d}日`;
+  const weekday = `星期${WEEKDAYS[dateObj.getDay()]}`;
+
+  if (dateKey === todayKey) return `今天・${md} ${weekday}`;
+  if (dateKey === yesterdayKey) return `昨天・${md} ${weekday}`;
+  return `${md} ${weekday}`;
+}
+
+/**
+ * Groups orders by their local calendar date, then sorts both the groups and
+ * the orders within each group in the same direction — oldest-first for the
+ * 待處理 board (handle the longest-waiting orders first), newest-first for
+ * the 已完成 board (most recent history on top).
+ */
+export function groupOrdersByDate(
+  orders: SerializedOrder[],
+  direction: "oldest-first" | "newest-first"
+): OrderDateGroup[] {
+  const map = new Map<string, SerializedOrder[]>();
+  for (const order of orders) {
+    const key = dateKeyOfIso(order.createdAt);
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(order);
+  }
+
+  const groups: OrderDateGroup[] = Array.from(map.entries()).map(([dateKey, list]) => ({
+    dateKey,
+    label: labelFor(dateKey),
+    orders: [...list].sort((a, b) => {
+      const diff = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      return direction === "oldest-first" ? diff : -diff;
+    }),
+  }));
+
+  groups.sort((a, b) => {
+    const diff = a.dateKey.localeCompare(b.dateKey);
+    return direction === "oldest-first" ? diff : -diff;
+  });
+
+  return groups;
+}

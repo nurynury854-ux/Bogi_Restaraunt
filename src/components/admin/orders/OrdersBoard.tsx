@@ -1,0 +1,138 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { UtensilsCrossed, ShoppingBag, Bike } from "lucide-react";
+import type { SerializedOrder } from "@/lib/types";
+import {
+  DINING_METHODS,
+  DINING_METHOD_LABEL,
+  PENDING_STATUSES,
+  COMPLETED_STATUSES,
+  type DiningMethod,
+  type OrderStatus,
+} from "@/lib/constants";
+import { groupOrdersByDate } from "@/lib/orderGrouping";
+import { useEventStream } from "@/lib/hooks/useEventStream";
+import { OrderCard } from "@/components/admin/orders/OrderCard";
+
+const METHOD_ICON: Record<DiningMethod, typeof UtensilsCrossed> = {
+  DINE_IN: UtensilsCrossed,
+  PICKUP: ShoppingBag,
+  DELIVERY: Bike,
+};
+
+export function OrdersBoard({
+  mode,
+  branchId,
+  initialOrders,
+}: {
+  mode: "pending" | "completed";
+  branchId: string;
+  initialOrders: SerializedOrder[];
+}) {
+  const [orders, setOrders] = useState(initialOrders);
+  const [activeMethod, setActiveMethod] = useState<DiningMethod>("DINE_IN");
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const relevantStatuses: OrderStatus[] = mode === "pending" ? PENDING_STATUSES : COMPLETED_STATUSES;
+
+  useEventStream({
+    "order:new": (order: SerializedOrder) => {
+      if (order.branchId !== branchId) return;
+      if (!relevantStatuses.includes(order.status as OrderStatus)) return;
+      setOrders((prev) => (prev.some((o) => o.id === order.id) ? prev : [order, ...prev]));
+    },
+    "order:updated": (order: SerializedOrder) => {
+      if (order.branchId !== branchId) return;
+      const belongsHere = relevantStatuses.includes(order.status as OrderStatus);
+      setOrders((prev) => {
+        const exists = prev.some((o) => o.id === order.id);
+        if (belongsHere) {
+          return exists ? prev.map((o) => (o.id === order.id ? order : o)) : [order, ...prev];
+        }
+        return exists ? prev.filter((o) => o.id !== order.id) : prev;
+      });
+    },
+  });
+
+  async function updateStatus(orderId: string, status: "COMPLETED" | "CANCELLED") {
+    setBusyId(orderId);
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok && mode === "pending") {
+        // Update immediately for the admin who took the action; other open
+        // tabs/devices pick up the same change a moment later via SSE.
+        setOrders((prev) => prev.filter((o) => o.id !== orderId));
+      }
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  const methodOrders = useMemo(
+    () => orders.filter((o) => o.diningMethod === activeMethod),
+    [orders, activeMethod]
+  );
+
+  const groups = useMemo(
+    () => groupOrdersByDate(methodOrders, mode === "pending" ? "oldest-first" : "newest-first"),
+    [methodOrders, mode]
+  );
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex gap-2">
+        {DINING_METHODS.map((method) => {
+          const Icon = METHOD_ICON[method];
+          const count = orders.filter((o) => o.diningMethod === method).length;
+          return (
+            <button
+              key={method}
+              onClick={() => setActiveMethod(method)}
+              className={`flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                activeMethod === method
+                  ? "bg-brand-500 text-white"
+                  : "border border-ink-100 bg-white text-ink-600 hover:border-brand-300"
+              }`}
+            >
+              <Icon className="size-4" />
+              {DINING_METHOD_LABEL[method]}
+              <span className="opacity-70">({count})</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {groups.length === 0 && (
+        <div className="rounded-2xl bg-white p-10 text-center text-ink-400 shadow-soft">
+          目前沒有{DINING_METHOD_LABEL[activeMethod]}的{mode === "pending" ? "待處理" : "已完成"}訂單
+        </div>
+      )}
+
+      {groups.map((group) => (
+        <div key={group.dateKey} className="flex flex-col gap-3">
+          <h3 className="text-sm font-semibold text-ink-500">{group.label}</h3>
+          <div className="flex flex-col gap-3">
+            {group.orders.map((order) => (
+              <OrderCard
+                key={order.id}
+                order={order}
+                busy={busyId === order.id}
+                onComplete={
+                  mode === "pending" ? () => updateStatus(order.id, "COMPLETED") : undefined
+                }
+                onCancel={
+                  mode === "pending" ? () => updateStatus(order.id, "CANCELLED") : undefined
+                }
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}

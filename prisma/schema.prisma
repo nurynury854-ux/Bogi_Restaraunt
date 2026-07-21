@@ -1,0 +1,114 @@
+// 福福早餐店 online ordering demo — Prisma schema (SQLite)
+// Note: SQLite has no native enum support, so status/method-style fields are
+// plain Strings; allowed values are enforced in the app layer (Zod + TS union types).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Branch {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  address   String
+  phone     String
+  hours     String
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  timeSlots TimeSlot[]
+  orders    Order[]
+}
+
+model MenuCategory {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  sortOrder Int        @default(0)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  items     MenuItem[]
+}
+
+model MenuItem {
+  id          String       @id @default(cuid())
+  categoryId  String
+  category    MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  name        String
+  price       Int
+  description String?
+  isAvailable Boolean      @default(true)
+  sortOrder   Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  orderItems  OrderItem[]
+}
+
+/// method: "PICKUP" | "DELIVERY"
+model TimeSlot {
+  id        String   @id @default(cuid())
+  branchId  String
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  method    String
+  label     String
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders    Order[]
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
+/// diningMethod: "DINE_IN" | "PICKUP" | "DELIVERY"
+/// status: "PENDING" | "PREPARING" | "COMPLETED" | "CANCELLED"
+/// paymentMethod: "CASH" | "TRANSFER"
+model Order {
+  id              String      @id @default(cuid())
+  orderNo         String      @unique
+  branchId        String
+  branch          Branch      @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  diningMethod    String
+  status          String      @default("PENDING")
+  tableNumber     String?
+  timeSlotId      String?
+  timeSlot        TimeSlot?   @relation(fields: [timeSlotId], references: [id], onDelete: SetNull)
+  customerName    String
+  customerPhone   String
+  deliveryAddress String?
+  notes           String?
+  paymentMethod   String
+  totalAmount     Int
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  items           OrderItem[]
+
+  @@index([branchId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id            String    @id @default(cuid())
+  orderId       String
+  order         Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId    String?
+  menuItem      MenuItem? @relation(fields: [menuItemId], references: [id], onDelete: SetNull)
+  nameSnapshot  String
+  priceSnapshot Int
+  quantity      Int
+  subtotal      Int
+}
