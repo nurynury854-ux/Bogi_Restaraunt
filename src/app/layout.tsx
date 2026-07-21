@@ -24,6 +24,9 @@ export const viewport: Viewport = {
   themeColor: "#c8722e",
   width: "device-width",
   initialScale: 1,
+  // Let content extend into the notch / rounded-corner areas so our
+  // safe-area-aware padding can position fixed UI correctly on phones.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

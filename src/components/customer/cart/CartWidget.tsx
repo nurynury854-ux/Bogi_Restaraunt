@@ -57,7 +57,7 @@ export function CartWidget({ variant }: { variant: "sidebar" | "mobile" }) {
             exit={{ y: 80, opacity: 0 }}
             transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
             onClick={() => setExpanded(true)}
-            className="fixed inset-x-4 bottom-4 z-40 flex cursor-pointer items-center justify-between rounded-2xl bg-ink-900 px-5 py-4 text-white shadow-lift"
+            className="bottom-safe fixed inset-x-4 z-40 flex cursor-pointer items-center justify-between rounded-2xl bg-ink-900 px-5 py-4 text-white shadow-lift"
           >
             <span className="flex items-center gap-2 text-sm">
               <ShoppingBag className="size-4" />
@@ -86,7 +86,7 @@ export function CartWidget({ variant }: { variant: "sidebar" | "mobile" }) {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="fixed inset-x-0 bottom-0 z-50 max-h-[75vh] overflow-y-auto rounded-t-3xl bg-cream-50 p-5 shadow-lift"
+              className="pb-safe fixed inset-x-0 bottom-0 z-50 max-h-[80dvh] overflow-y-auto rounded-t-3xl bg-cream-50 p-5 shadow-lift"
             >
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="font-semibold text-ink-900">您的購物車</h3>

@@ -86,7 +86,7 @@ export function OrdersBoard({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex gap-2">
+      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
         {DINING_METHODS.map((method) => {
           const Icon = METHOD_ICON[method];
           const count = orders.filter((o) => o.diningMethod === method).length;
@@ -94,7 +94,7 @@ export function OrdersBoard({
             <button
               key={method}
               onClick={() => setActiveMethod(method)}
-              className={`flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+              className={`flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                 activeMethod === method
                   ? "bg-brand-500 text-white"
                   : "border border-ink-100 bg-white text-ink-600 hover:border-brand-300"

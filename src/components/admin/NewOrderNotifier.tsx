@@ -86,13 +86,13 @@ export function NewOrderNotifier({ branchId }: { branchId: string }) {
     <>
       <button
         onClick={toggleSound}
-        className="fixed right-5 top-16 z-50 flex items-center gap-1.5 rounded-full border border-ink-100 bg-white px-3 py-1.5 text-xs text-ink-500 shadow-soft transition-colors hover:border-brand-300"
+        className="fixed right-3 top-16 z-50 flex items-center gap-1.5 rounded-full border border-ink-100 bg-white px-3 py-1.5 text-xs text-ink-500 shadow-soft transition-colors hover:border-brand-300 sm:right-5"
       >
         {soundOn ? <Bell className="size-3.5 text-brand-500" /> : <BellOff className="size-3.5" />}
         新訂單提示音{soundOn ? "：開" : "：關"}
       </button>
 
-      <div className="fixed right-5 top-28 z-50 flex w-80 flex-col gap-2">
+      <div className="fixed inset-x-3 top-28 z-50 flex flex-col gap-2 sm:inset-x-auto sm:right-5 sm:w-80">
         <AnimatePresence>
           {toasts.map((order) => (
             <motion.div

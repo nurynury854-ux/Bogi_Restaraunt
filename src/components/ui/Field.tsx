@@ -34,8 +34,10 @@ export function FieldWrapper({
   );
 }
 
+// text-base (16px) on phones prevents iOS Safari from zooming in when a field
+// is focused; text-sm on larger screens keeps the tighter desktop look.
 const baseInputClasses =
-  "h-11 w-full rounded-xl border border-ink-100 bg-cream-50 px-3.5 text-sm text-ink-900 outline-none transition-colors placeholder:text-ink-300 focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-200";
+  "h-11 w-full rounded-xl border border-ink-100 bg-cream-50 px-3.5 text-base sm:text-sm text-ink-900 outline-none transition-colors placeholder:text-ink-300 focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-200";
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   error?: boolean;
@@ -57,7 +59,7 @@ interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {}
 export function Textarea({ className = "", ...props }: TextareaProps) {
   return (
     <textarea
-      className={`min-h-24 w-full resize-none rounded-xl border border-ink-100 bg-cream-50 px-3.5 py-2.5 text-sm text-ink-900 outline-none transition-colors placeholder:text-ink-300 focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-200 ${className}`}
+      className={`min-h-24 w-full resize-none rounded-xl border border-ink-100 bg-cream-50 px-3.5 py-2.5 text-base sm:text-sm text-ink-900 outline-none transition-colors placeholder:text-ink-300 focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-200 ${className}`}
       {...props}
     />
   );

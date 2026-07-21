@@ -41,6 +41,9 @@
 
 html {
   scroll-behavior: smooth;
+  /* Stop mobile browsers from auto-inflating text on orientation change. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
@@ -50,6 +53,18 @@ body {
     var(--color-cream-100);
   color: var(--color-ink-900);
   font-family: var(--font-sans), "PingFang TC", "Microsoft JhengHei", sans-serif;
+  /* Never let a stray wide element cause horizontal scrolling on phones. */
+  overflow-x: hidden;
+  /* Remove the grey flash on tap on mobile Safari/Chrome. */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Respect the iOS home-indicator / notch safe areas for fixed bottom UI. */
+.pb-safe {
+  padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
+}
+.bottom-safe {
+  bottom: calc(1rem + env(safe-area-inset-bottom));
 }
 
 ::selection {
