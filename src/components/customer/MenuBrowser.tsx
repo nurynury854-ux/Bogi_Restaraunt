@@ -107,6 +107,25 @@ export function MenuBrowser({
         </div>
       </header>
 
+      {/* Mobile category rail — full-width horizontal scroller, phones only.
+          Kept OUTSIDE the flex row below so it lays out as a top bar rather
+          than a vertical column beside the menu. */}
+      <div className="sticky top-[57px] z-20 flex gap-2 overflow-x-auto border-b border-ink-100 bg-cream-50/95 px-4 py-2.5 backdrop-blur lg:hidden">
+        {categories.map((cat) => (
+          <button
+            key={cat.id}
+            onClick={() => scrollToCategory(cat.id)}
+            className={`shrink-0 cursor-pointer whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
+              activeCategory === cat.id
+                ? "bg-brand-500 text-white"
+                : "bg-white text-ink-600 border border-ink-100"
+            }`}
+          >
+            {cat.name}
+          </button>
+        ))}
+      </div>
+
       <div className="mx-auto flex w-full max-w-6xl flex-1 gap-6 px-4 py-6 sm:px-6 lg:gap-8">
         {/* Desktop category rail */}
         <nav className="sticky top-[76px] hidden h-fit w-44 shrink-0 flex-col gap-1 lg:flex">
@@ -124,23 +143,6 @@ export function MenuBrowser({
             </button>
           ))}
         </nav>
-
-        {/* Mobile category rail */}
-        <div className="sticky top-[57px] z-20 -mx-4 flex gap-2 overflow-x-auto border-b border-ink-100 bg-cream-50/95 px-4 py-2.5 backdrop-blur lg:hidden">
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => scrollToCategory(cat.id)}
-              className={`shrink-0 cursor-pointer rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
-                activeCategory === cat.id
-                  ? "bg-brand-500 text-white"
-                  : "bg-white text-ink-600 border border-ink-100"
-              }`}
-            >
-              {cat.name}
-            </button>
-          ))}
-        </div>
 
         <main className="min-w-0 flex-1">
           {totalItemCount === 0 && (
