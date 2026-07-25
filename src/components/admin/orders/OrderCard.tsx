@@ -40,12 +40,12 @@ export function OrderCard({
             )}
           </div>
           <p className="mt-1 text-xs text-ink-400">
-            下單時間：{formatOrderTime(order.createdAt)}
+            Placed {formatOrderTime(order.createdAt)}
             {order.status === "COMPLETED" && (
-              <> ・完成時間：{formatOrderTime(order.updatedAt)}</>
+              <> · Completed {formatOrderTime(order.updatedAt)}</>
             )}
             {order.status === "CANCELLED" && (
-              <> ・取消時間：{formatOrderTime(order.updatedAt)}</>
+              <> · Cancelled {formatOrderTime(order.updatedAt)}</>
             )}
           </p>
         </div>
@@ -64,19 +64,19 @@ export function OrderCard({
         {order.tableNumber && (
           <div className="flex items-center gap-2">
             <MapPin className="size-3.5 shrink-0 text-brand-500" />
-            <span>桌號：{order.tableNumber}</span>
+            <span>Table: {order.tableNumber}</span>
           </div>
         )}
         {order.timeSlot && (
           <div className="flex items-center gap-2">
             <Clock className="size-3.5 shrink-0 text-brand-500" />
-            <span>時段：{order.timeSlot.label}</span>
+            <span>Time: {order.timeSlot.label}</span>
           </div>
         )}
         {order.deliveryAddress && (
           <div className="flex items-center gap-2 sm:col-span-2">
             <MapPin className="size-3.5 shrink-0 text-brand-500" />
-            <span>外送地址：{order.deliveryAddress}</span>
+            <span>Delivery to: {order.deliveryAddress}</span>
           </div>
         )}
         <div className="flex items-center gap-2">
@@ -86,13 +86,13 @@ export function OrderCard({
       </div>
 
       <div className="rounded-xl bg-cream-50 px-3.5 py-2.5 text-sm text-ink-700">
-        {order.items.map((i) => `${i.nameSnapshot} x${i.quantity}`).join("、")}
+        {order.items.map((i) => `${i.nameSnapshot} x${i.quantity}`).join(", ")}
       </div>
 
       {order.notes && (
         <div className="flex items-start gap-2 text-sm text-ink-700">
           <StickyNote className="mt-0.5 size-3.5 shrink-0 text-brand-500" />
-          <span>備註：{order.notes}</span>
+          <span>Notes: {order.notes}</span>
         </div>
       )}
 
@@ -100,12 +100,12 @@ export function OrderCard({
         <div className="flex justify-end gap-2 border-t border-ink-100 pt-3">
           {onCancel && (
             <Button variant="ghost" size="sm" disabled={busy} onClick={onCancel}>
-              取消訂單
+              Cancel Order
             </Button>
           )}
           {onComplete && (
             <Button size="sm" loading={busy} onClick={onComplete}>
-              標記完成
+              Mark Complete
             </Button>
           )}
         </div>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdminSession } from "@/lib/adminAuth";
+import { assertTenantOwns, requireAdminSession } from "@/lib/adminAuth";
 import { handleApiError } from "@/lib/apiResponse";
 import { updateOrderStatusSchema } from "@/lib/validation";
 
@@ -9,15 +9,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAdminSession();
+    const session = await requireAdminSession();
     const { id } = await params;
     const order = await prisma.order.findUnique({
       where: { id },
       include: { items: true, branch: true, timeSlot: true },
     });
-    if (!order) {
-      return NextResponse.json({ error: "找不到此訂單" }, { status: 404 });
-    }
+    assertTenantOwns(order, session.tenantId);
     return NextResponse.json({ order });
   } catch (error) {
     return handleApiError(error);
@@ -29,8 +27,11 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAdminSession();
+    const session = await requireAdminSession();
     const { id } = await params;
+    const existing = await prisma.order.findUnique({ where: { id } });
+    assertTenantOwns(existing, session.tenantId);
+
     const body = await request.json();
     const data = updateOrderStatusSchema.parse(body);
     const order = await prisma.order.update({

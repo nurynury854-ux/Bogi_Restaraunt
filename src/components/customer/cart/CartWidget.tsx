@@ -9,7 +9,13 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { CartLines } from "@/components/customer/cart/CartLines";
 
-export function CartWidget({ variant }: { variant: "sidebar" | "mobile" }) {
+export function CartWidget({
+  variant,
+  tenantSlug,
+}: {
+  variant: "sidebar" | "mobile";
+  tenantSlug: string;
+}) {
   const cart = useOrderStore((s) => s.cart);
   const router = useRouter();
   const total = cartTotal(cart);
@@ -18,7 +24,7 @@ export function CartWidget({ variant }: { variant: "sidebar" | "mobile" }) {
 
   function goCheckout() {
     setExpanded(false);
-    router.push("/checkout/details");
+    router.push(`/${tenantSlug}/checkout/details`);
   }
 
   if (variant === "sidebar") {
@@ -26,19 +32,19 @@ export function CartWidget({ variant }: { variant: "sidebar" | "mobile" }) {
       <Card className="flex flex-col gap-4 p-5">
         <div className="flex items-center gap-2">
           <ShoppingBag className="size-5 text-brand-500" />
-          <h3 className="font-semibold text-ink-900">您的購物車</h3>
+          <h3 className="font-semibold text-ink-900">Your Cart</h3>
         </div>
         <CartLines items={cart} />
         {cart.length > 0 && (
           <>
             <div className="border-t border-ink-100 pt-3">
               <div className="flex items-center justify-between text-base font-semibold text-ink-900">
-                <span>總計</span>
+                <span>Total</span>
                 <span className="text-brand-600">${total}</span>
               </div>
             </div>
             <Button fullWidth size="lg" onClick={goCheckout}>
-              前往結帳（{count} 件）
+              Checkout ({count} item{count === 1 ? "" : "s"})
             </Button>
           </>
         )}
@@ -61,7 +67,7 @@ export function CartWidget({ variant }: { variant: "sidebar" | "mobile" }) {
           >
             <span className="flex items-center gap-2 text-sm">
               <ShoppingBag className="size-4" />
-              {count} 件商品
+              {count} item{count === 1 ? "" : "s"}
               <ChevronUp className="size-4" />
             </span>
             <span className="font-semibold">${total}</span>
@@ -89,7 +95,7 @@ export function CartWidget({ variant }: { variant: "sidebar" | "mobile" }) {
               className="pb-safe fixed inset-x-0 bottom-0 z-50 max-h-[80dvh] overflow-y-auto rounded-t-3xl bg-cream-50 p-5 shadow-lift"
             >
               <div className="mb-3 flex items-center justify-between">
-                <h3 className="font-semibold text-ink-900">您的購物車</h3>
+                <h3 className="font-semibold text-ink-900">Your Cart</h3>
                 <button
                   onClick={() => setExpanded(false)}
                   className="cursor-pointer text-ink-400 hover:text-ink-700"
@@ -101,11 +107,11 @@ export function CartWidget({ variant }: { variant: "sidebar" | "mobile" }) {
               {cart.length > 0 && (
                 <div className="mt-4 border-t border-ink-100 pt-3">
                   <div className="mb-3 flex items-center justify-between text-base font-semibold text-ink-900">
-                    <span>總計</span>
+                    <span>Total</span>
                     <span className="text-brand-600">${total}</span>
                   </div>
                   <Button fullWidth size="lg" onClick={goCheckout}>
-                    前往結帳
+                    Checkout
                   </Button>
                 </div>
               )}

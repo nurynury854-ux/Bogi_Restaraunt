@@ -1,3 +1,12 @@
+export interface SerializedTenant {
+  id: string;
+  slug: string;
+  businessName: string;
+  logoUrl: string | null;
+  accentColor: string | null;
+  isActive: boolean;
+}
+
 export interface SerializedOrderItem {
   id: string;
   nameSnapshot: string;
@@ -8,6 +17,7 @@ export interface SerializedOrderItem {
 
 export interface SerializedBranch {
   id: string;
+  tenantId: string;
   name: string;
   address: string;
   phone: string;
@@ -30,6 +40,7 @@ export interface SerializedMenuItem {
   name: string;
   price: number;
   description: string | null;
+  imageUrl: string | null;
   isAvailable: boolean;
   sortOrder: number;
 }

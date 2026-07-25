@@ -9,7 +9,7 @@ export function CartLines({ items }: { items: CartItem[] }) {
   const removeItem = useOrderStore((s) => s.removeItem);
 
   if (items.length === 0) {
-    return <p className="py-6 text-center text-sm text-ink-400">購物車還是空的，快去挑選餐點吧！</p>;
+    return <p className="py-6 text-center text-sm text-ink-400">Your cart is empty — go add some items!</p>;
   }
 
   return (
@@ -18,7 +18,7 @@ export function CartLines({ items }: { items: CartItem[] }) {
         <li key={item.id} className="flex items-center justify-between gap-3">
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-ink-900">{item.name}</p>
-            <p className="text-xs text-ink-500">${item.price} / 份</p>
+            <p className="text-xs text-ink-500">${item.price} each</p>
           </div>
           <QuantityStepper
             size="sm"
@@ -28,7 +28,7 @@ export function CartLines({ items }: { items: CartItem[] }) {
           <button
             onClick={() => removeItem(item.id)}
             className="cursor-pointer text-ink-300 transition-colors hover:text-danger-500"
-            aria-label="移除品項"
+            aria-label="Remove item"
           >
             <X className="size-4" />
           </button>

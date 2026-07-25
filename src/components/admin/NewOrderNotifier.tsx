@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Bell, BellOff, PartyPopper } from "lucide-react";
 import { usePolling } from "@/lib/hooks/usePolling";
@@ -27,7 +27,9 @@ export function NewOrderNotifier({ branchId }: { branchId: string }) {
   const [toasts, setToasts] = useState<SerializedOrder[]>([]);
   const [soundOn, setSoundOn] = useState(true);
   const soundOnRef = useRef(soundOn);
-  soundOnRef.current = soundOn;
+  useEffect(() => {
+    soundOnRef.current = soundOn;
+  }, [soundOn]);
   const audioCtxRef = useRef<AudioContext | null>(null);
   // Order IDs we've already seen. `null` until the first poll establishes a
   // baseline, so existing pending orders on page load don't trigger alerts.
@@ -89,7 +91,7 @@ export function NewOrderNotifier({ branchId }: { branchId: string }) {
         className="fixed right-3 top-16 z-50 flex items-center gap-1.5 rounded-full border border-ink-100 bg-white px-3 py-1.5 text-xs text-ink-500 shadow-soft transition-colors hover:border-brand-300 sm:right-5"
       >
         {soundOn ? <Bell className="size-3.5 text-brand-500" /> : <BellOff className="size-3.5" />}
-        新訂單提示音{soundOn ? "：開" : "：關"}
+        New order sound: {soundOn ? "On" : "Off"}
       </button>
 
       <div className="fixed inset-x-3 top-28 z-50 flex flex-col gap-2 sm:inset-x-auto sm:right-5 sm:w-80">
@@ -105,7 +107,7 @@ export function NewOrderNotifier({ branchId }: { branchId: string }) {
             >
               <PartyPopper className="mt-0.5 size-5 shrink-0 text-gold-400" />
               <div className="min-w-0">
-                <p className="text-sm font-semibold">新訂單來囉！{order.orderNo}</p>
+                <p className="text-sm font-semibold">New order! {order.orderNo}</p>
                 <p className="truncate text-xs text-white/70">
                   {order.customerName} · ${order.totalAmount}
                 </p>

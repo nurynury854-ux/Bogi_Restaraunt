@@ -32,8 +32,8 @@
   --color-danger-500: #c0392b;
   --color-danger-600: #a12f22;
 
-  --font-display: var(--font-noto-serif-tc);
-  --font-sans: var(--font-noto-sans-tc);
+  --font-display: var(--font-fraunces);
+  --font-sans: var(--font-inter);
 
   --shadow-soft: 0 2px 8px rgba(74, 61, 52, 0.06), 0 8px 24px rgba(74, 61, 52, 0.08);
   --shadow-lift: 0 12px 32px rgba(74, 61, 52, 0.14), 0 4px 12px rgba(74, 61, 52, 0.08);
@@ -52,7 +52,7 @@ body {
     radial-gradient(900px 500px at 110% 10%, var(--color-gold-400) 0%, transparent 45%),
     var(--color-cream-100);
   color: var(--color-ink-900);
-  font-family: var(--font-sans), "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
   /* Never let a stray wide element cause horizontal scrolling on phones. */
   overflow-x: hidden;
   /* Remove the grey flash on tap on mobile Safari/Chrome. */

@@ -14,19 +14,25 @@ const METHOD_ICON: Record<DiningMethod, typeof UtensilsCrossed> = {
   DELIVERY: Bike,
 };
 
-export function BranchSelector({ branches }: { branches: Branch[] }) {
+export function BranchSelector({
+  tenantSlug,
+  branches,
+}: {
+  tenantSlug: string;
+  branches: Branch[];
+}) {
   const router = useRouter();
   const selectBranch = useOrderStore((s) => s.selectBranch);
 
   function handleSelect(branch: Branch, method: DiningMethod) {
-    selectBranch(branch.id, branch.name, method);
-    router.push("/menu");
+    selectBranch(tenantSlug, branch.id, branch.name, method);
+    router.push(`/${tenantSlug}/menu`);
   }
 
   if (branches.length === 0) {
     return (
       <Card className="mt-10 p-8 text-center text-ink-500">
-        目前尚未設定分店，請洽管理後台。
+        No locations have been set up yet. Please check back soon.
       </Card>
     );
   }
@@ -61,7 +67,9 @@ export function BranchSelector({ branches }: { branches: Branch[] }) {
               </div>
 
               <div className="mt-4 border-t border-ink-100 pt-4">
-                <p className="mb-2.5 text-xs font-medium text-ink-500">請選擇用餐方式</p>
+                <p className="mb-2.5 text-xs font-medium text-ink-500">
+                  How would you like to order?
+                </p>
                 <div className="grid grid-cols-3 gap-2">
                   {DINING_METHODS.map((method) => {
                     const Icon = METHOD_ICON[method];

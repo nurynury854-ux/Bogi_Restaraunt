@@ -9,9 +9,9 @@ import {
 const phoneSchema = z
   .string()
   .trim()
-  .min(8, "請輸入有效的電話號碼")
-  .max(15, "請輸入有效的電話號碼")
-  .regex(/^[0-9+\-\s]+$/, "電話號碼格式不正確");
+  .min(8, "Please enter a valid phone number")
+  .max(20, "Please enter a valid phone number")
+  .regex(/^[0-9+\-\s()]+$/, "Phone number format is invalid");
 
 export const orderItemSchema = z.object({
   menuItemId: z.string().min(1),
@@ -20,14 +20,15 @@ export const orderItemSchema = z.object({
 
 export const createOrderSchema = z
   .object({
-    branchId: z.string().min(1, "請選擇分店"),
+    tenantSlug: z.string().min(1, "Missing store"),
+    branchId: z.string().min(1, "Please select a location"),
     diningMethod: z.enum(DINING_METHODS),
-    items: z.array(orderItemSchema).min(1, "購物車內沒有商品"),
+    items: z.array(orderItemSchema).min(1, "Your cart is empty"),
     tableNumber: z.string().trim().max(20).optional(),
     timeSlotId: z.string().min(1).optional(),
-    customerName: z.string().trim().min(1, "請輸入姓名").max(40),
+    customerName: z.string().trim().min(1, "Please enter your name").max(60),
     customerPhone: phoneSchema,
-    deliveryAddress: z.string().trim().max(120).optional(),
+    deliveryAddress: z.string().trim().max(160).optional(),
     notes: z.string().trim().max(300).optional(),
     paymentMethod: z.enum(PAYMENT_METHODS),
   })
@@ -36,7 +37,7 @@ export const createOrderSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["tableNumber"],
-        message: "請輸入桌號",
+        message: "Please enter a table number",
       });
     }
     if (
@@ -46,14 +47,14 @@ export const createOrderSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["timeSlotId"],
-        message: "請選擇時段",
+        message: "Please select a time slot",
       });
     }
     if (data.diningMethod === "DELIVERY" && !data.deliveryAddress) {
       ctx.addIssue({
         code: "custom",
         path: ["deliveryAddress"],
-        message: "請輸入外送地址",
+        message: "Please enter a delivery address",
       });
     }
   });
@@ -64,35 +65,63 @@ export const updateOrderStatusSchema = z.object({
   status: z.enum(ORDER_STATUSES),
 });
 
+export const branchCreateSchema = z.object({
+  name: z.string().trim().min(1, "Please enter a location name").max(60),
+  address: z.string().trim().min(1, "Please enter an address").max(160),
+  phone: z.string().trim().min(1, "Please enter a phone number").max(30),
+  hours: z.string().trim().min(1, "Please enter business hours").max(60),
+});
+
 export const branchUpdateSchema = z.object({
-  address: z.string().trim().min(1).max(120).optional(),
+  name: z.string().trim().min(1).max(60).optional(),
+  address: z.string().trim().min(1).max(160).optional(),
   phone: z.string().trim().min(1).max(30).optional(),
   hours: z.string().trim().min(1).max(60).optional(),
   isActive: z.boolean().optional(),
 });
 
+export const tenantSettingsUpdateSchema = z.object({
+  businessName: z.string().trim().min(1, "Please enter a business name").max(80).optional(),
+  logoUrl: z.string().trim().url().max(600).nullable().optional(),
+  accentColor: z
+    .string()
+    .trim()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Use a hex color like #C8722E")
+    .nullable()
+    .optional(),
+});
+
 export const categoryCreateSchema = z.object({
-  name: z.string().trim().min(1, "請輸入分類名稱").max(20),
+  name: z.string().trim().min(1, "Please enter a category name").max(30),
   sortOrder: z.number().int().optional(),
 });
 
 export const categoryUpdateSchema = categoryCreateSchema.partial();
 
 export const menuItemCreateSchema = z.object({
-  categoryId: z.string().min(1, "請選擇分類"),
-  name: z.string().trim().min(1, "請輸入品項名稱").max(60),
-  price: z.number().int().min(0, "價格不可為負數").max(100000),
-  description: z.string().trim().max(200).optional(),
+  categoryId: z.string().min(1, "Please select a category"),
+  name: z.string().trim().min(1, "Please enter an item name").max(80),
+  price: z.number().int().min(0, "Price can't be negative").max(1000000),
+  description: z.string().trim().max(300).optional(),
+  imageUrl: z.string().trim().url().max(600).optional(),
   isAvailable: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
 });
 
-export const menuItemUpdateSchema = menuItemCreateSchema.partial();
+export const menuItemUpdateSchema = z.object({
+  categoryId: z.string().min(1).optional(),
+  name: z.string().trim().min(1).max(80).optional(),
+  price: z.number().int().min(0).max(1000000).optional(),
+  description: z.string().trim().max(300).nullable().optional(),
+  imageUrl: z.string().trim().url().max(600).nullable().optional(),
+  isAvailable: z.boolean().optional(),
+  sortOrder: z.number().int().optional(),
+});
 
 export const timeSlotCreateSchema = z.object({
-  branchId: z.string().min(1, "請選擇分店"),
+  branchId: z.string().min(1, "Please select a location"),
   method: z.enum(TIME_SLOT_METHODS),
-  label: z.string().trim().min(1, "請輸入時段名稱").max(30),
+  label: z.string().trim().min(1, "Please enter a time slot label").max(30),
   isActive: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
 });
@@ -104,6 +133,22 @@ export const timeSlotUpdateSchema = z.object({
 });
 
 export const adminLoginSchema = z.object({
-  username: z.string().trim().min(1, "請輸入帳號"),
-  password: z.string().min(1, "請輸入密碼"),
+  email: z.string().trim().min(1, "Please enter your email").email("Enter a valid email"),
+  password: z.string().min(1, "Please enter your password"),
+});
+
+export const checkSlugSchema = z.object({
+  slug: z.string().trim().min(1).max(40),
+});
+
+export const signupSchema = z.object({
+  email: z.string().trim().min(1, "Please enter your email").email("Enter a valid email"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  businessName: z.string().trim().min(1, "Please enter your business name").max(80),
+  slug: z
+    .string()
+    .trim()
+    .min(3, "URL must be at least 3 characters")
+    .max(40, "URL is too long"),
+  branchName: z.string().trim().min(1, "Please enter a location name").max(60),
 });

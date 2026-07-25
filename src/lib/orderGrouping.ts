@@ -6,7 +6,11 @@ export interface OrderDateGroup {
   orders: SerializedOrder[];
 }
 
-const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTHS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
 
 function dateKeyOfDate(d: Date): string {
   const y = d.getFullYear();
@@ -28,19 +32,19 @@ function labelFor(dateKey: string): string {
 
   const [y, m, d] = dateKey.split("-").map(Number);
   const dateObj = new Date(y, m - 1, d);
-  const md = `${m}月${d}日`;
-  const weekday = `星期${WEEKDAYS[dateObj.getDay()]}`;
+  const md = `${MONTHS[dateObj.getMonth()]} ${d}`;
+  const weekday = WEEKDAYS[dateObj.getDay()];
 
-  if (dateKey === todayKey) return `今天・${md} ${weekday}`;
-  if (dateKey === yesterdayKey) return `昨天・${md} ${weekday}`;
-  return `${md} ${weekday}`;
+  if (dateKey === todayKey) return `Today · ${md} (${weekday})`;
+  if (dateKey === yesterdayKey) return `Yesterday · ${md} (${weekday})`;
+  return `${md} (${weekday})`;
 }
 
 /**
  * Groups orders by their local calendar date, then sorts both the groups and
  * the orders within each group in the same direction — oldest-first for the
- * 待處理 board (handle the longest-waiting orders first), newest-first for
- * the 已完成 board (most recent history on top).
+ * Pending board (handle the longest-waiting orders first), newest-first for
+ * the Completed board (most recent history on top).
  */
 export function groupOrdersByDate(
   orders: SerializedOrder[],

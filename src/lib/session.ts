@@ -1,13 +1,15 @@
 import crypto from "node:crypto";
 
 const SECRET = process.env.SESSION_SECRET ?? "dev-only-insecure-secret-change-me";
-const SESSION_TTL_MS = 1000 * 60 * 60 * 12; // 12 hours
+const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
 
-export const ADMIN_SESSION_COOKIE = "fufu_admin_session";
+export const ADMIN_SESSION_COOKIE = "session";
 
 export interface AdminSessionPayload {
-  sub: string;
-  username: string;
+  sub: string; // AdminUser id
+  email: string;
+  tenantId: string;
+  tenantSlug: string;
   exp: number;
 }
 

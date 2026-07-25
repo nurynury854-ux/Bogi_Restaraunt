@@ -32,6 +32,11 @@ const emptyCustomer: CustomerDetails = {
 };
 
 interface OrderState {
+  // Which tenant's site this cart belongs to. A single browser tab could in
+  // principle visit two different tenants' sites in sequence (e.g. testing,
+  // or a bookmarked link) — if the tenant changes, the whole order state
+  // resets so nothing from one business's cart can leak into another's.
+  tenantSlug: string | null;
   branchId: string | null;
   branchName: string | null;
   diningMethod: DiningMethod | null;
@@ -41,6 +46,7 @@ interface OrderState {
   lastOrderNo: string | null;
 
   selectBranch: (
+    tenantSlug: string,
     branchId: string,
     branchName: string,
     diningMethod: DiningMethod
@@ -69,6 +75,7 @@ const sessionStorageWrapper: StateStorage = {
 export const useOrderStore = create<OrderState>()(
   persist(
     (set) => ({
+      tenantSlug: null,
       branchId: null,
       branchName: null,
       diningMethod: null,
@@ -77,14 +84,17 @@ export const useOrderStore = create<OrderState>()(
       paymentMethod: null,
       lastOrderNo: null,
 
-      selectBranch: (branchId, branchName, diningMethod) =>
+      selectBranch: (tenantSlug, branchId, branchName, diningMethod) =>
         set((state) => {
-          const branchChanged = state.branchId !== branchId;
+          const tenantChanged = state.tenantSlug !== tenantSlug;
+          const branchChanged = tenantChanged || state.branchId !== branchId;
           return {
+            tenantSlug,
             branchId,
             branchName,
             diningMethod,
             cart: branchChanged ? [] : state.cart,
+            customer: tenantChanged ? emptyCustomer : state.customer,
           };
         }),
 
@@ -132,10 +142,11 @@ export const useOrderStore = create<OrderState>()(
         }),
     }),
     {
-      name: "fufu-order",
+      name: "order-cart",
       storage: createJSONStorage(() => sessionStorageWrapper),
       skipHydration: true,
       partialize: (state) => ({
+        tenantSlug: state.tenantSlug,
         branchId: state.branchId,
         branchName: state.branchName,
         diningMethod: state.diningMethod,

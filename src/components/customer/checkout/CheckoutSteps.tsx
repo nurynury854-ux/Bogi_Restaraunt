@@ -4,16 +4,16 @@ import { usePathname } from "next/navigation";
 import { Check } from "lucide-react";
 
 const STEPS = [
-  { path: "/checkout/details", label: "訂購資訊" },
-  { path: "/checkout/payment", label: "付款方式" },
-  { path: "/checkout/review", label: "確認送出" },
+  { suffix: "/checkout/details", label: "Details" },
+  { suffix: "/checkout/payment", label: "Payment" },
+  { suffix: "/checkout/review", label: "Review" },
 ];
 
 export function CheckoutSteps() {
   const pathname = usePathname();
-  if (pathname === "/checkout/success") return null;
+  if (pathname.endsWith("/checkout/success")) return null;
 
-  const activeIndex = STEPS.findIndex((s) => s.path === pathname);
+  const activeIndex = STEPS.findIndex((s) => pathname.endsWith(s.suffix));
 
   return (
     <div className="mb-8 flex items-center justify-center gap-2 sm:gap-4">
@@ -21,7 +21,7 @@ export function CheckoutSteps() {
         const isDone = i < activeIndex;
         const isActive = i === activeIndex;
         return (
-          <div key={step.path} className="flex items-center gap-2 sm:gap-4">
+          <div key={step.suffix} className="flex items-center gap-2 sm:gap-4">
             <div className="flex flex-col items-center gap-1.5">
               <div
                 className={`flex size-8 items-center justify-center rounded-full text-xs font-semibold transition-colors ${

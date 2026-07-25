@@ -6,129 +6,98 @@ import bcrypt from "bcryptjs";
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
-// NOTE: prices below are PLACEHOLDERS — the owner sent item names/categories
-// but not the actual price list, so these are reasonable guesses to keep the
-// demo usable. Correct them anytime from 菜單管理 in the admin backend.
+// Demo/example tenant so there's something to click through immediately
+// after `npm run db:setup` — real tenants come from the public /signup flow.
+const DEMO_SLUG = "joes-cafe";
+const DEMO_BUSINESS_NAME = "Joe's Cafe";
+const DEMO_ADMIN_EMAIL = "owner@joescafe.example";
+const DEMO_ADMIN_PASSWORD = "demopass123";
+
 const CATEGORY_ITEMS: Record<
   string,
   { name: string; price: number; description?: string }[]
 > = {
-  套餐: [
-    { name: "單層厚片+餐點", price: 79, description: "日安家套餐" },
-    { name: "蘿蔔糕+拌珍珠麵", price: 89, description: "日安家套餐" },
-    { name: "花生蘿蔔糕吐司", price: 85, description: "日安家套餐" },
-    { name: "卡拉雞腿蘿蔔薯", price: 99, description: "日安家套餐" },
-    { name: "花生牛肉吐司捲", price: 95, description: "日安家套餐" },
+  Breakfast: [
+    { name: "Classic Breakfast Plate", price: 11, description: "Eggs, toast, hash browns, bacon" },
+    { name: "Avocado Toast", price: 9, description: "Sourdough, smashed avocado, chili flakes" },
+    { name: "Buttermilk Pancakes", price: 8, description: "Stack of three, maple syrup" },
+    { name: "Breakfast Burrito", price: 10 },
   ],
-  蛋餅: [
-    { name: "原味蛋餅", price: 30 },
-    { name: "起司蛋餅", price: 40 },
-    { name: "鮪魚蛋餅", price: 45 },
-    { name: "培根蛋餅", price: 45 },
-    { name: "玉米蛋餅", price: 40 },
-    { name: "火腿蛋餅", price: 40 },
-    { name: "泡菜蛋餅", price: 40 },
-    { name: "卡拉雞腿蘿蔔餅", price: 55 },
+  Sandwiches: [
+    { name: "Ham & Cheese Toastie", price: 8 },
+    { name: "Turkey Club", price: 10 },
+    { name: "Grilled Cheese", price: 7 },
+    { name: "BLT", price: 9 },
+    { name: "Egg & Bacon Roll", price: 7.5 },
   ],
-  吐司夾點: [
-    { name: "鮪魚吐司", price: 45 },
-    { name: "培根吐司", price: 45 },
-    { name: "火腿吐司", price: 40 },
-    { name: "起司吐司", price: 40 },
-    { name: "玉米吐司", price: 40 },
-    { name: "總匯吐司", price: 55 },
-    { name: "卡拉雞腿吐司", price: 55 },
-    { name: "黃金豬排吐司", price: 60 },
+  Salads: [
+    { name: "Caesar Salad", price: 9 },
+    { name: "Greek Salad", price: 9.5 },
+    { name: "Garden Salad", price: 7 },
   ],
-  麵食: [
-    { name: "蕃茄蛋麵", price: 55 },
-    { name: "泡菜麵", price: 55 },
-    { name: "滷肉麵", price: 50 },
-    { name: "蔥爆豬肉麵", price: 65 },
-    { name: "蔥爆雞肉麵", price: 65 },
-    { name: "番茄豬肉麵", price: 65 },
+  Mains: [
+    { name: "Grilled Chicken Rice Bowl", price: 12 },
+    { name: "Veggie Stir-fry Noodles", price: 11 },
+    { name: "Beef Chili", price: 13 },
   ],
-  飯食: [
-    { name: "滷肉飯", price: 50 },
-    { name: "番茄蛋炒飯", price: 55 },
-    { name: "泡菜炒飯", price: 55 },
-    { name: "蔥爆肉炒飯", price: 65 },
+  Sides: [
+    { name: "Hash Browns", price: 4 },
+    { name: "Side Salad", price: 4.5 },
+    { name: "French Fries", price: 4 },
+    { name: "Fruit Cup", price: 4 },
   ],
-  小食拼盤: [
-    { name: "薯餅", price: 25 },
-    { name: "熱狗", price: 30 },
-    { name: "小湯豆", price: 30 },
-    { name: "小雞塊", price: 40 },
-    { name: "培根", price: 35 },
-    { name: "玉米", price: 30 },
-    { name: "起司", price: 30 },
-    { name: "鮪魚", price: 35 },
-    { name: "火腿", price: 30 },
-    { name: "黃金豬排", price: 45 },
-    { name: "卡拉雞腿蘿蔔餅", price: 45 },
-    { name: "乳酪丹麥", price: 40 },
-  ],
-  飲品: [
-    { name: "紅茶 (M)", price: 15 },
-    { name: "紅茶 (L)", price: 20 },
-    { name: "綠茶 (M)", price: 15 },
-    { name: "綠茶 (L)", price: 20 },
-    { name: "奶茶 (M)", price: 25 },
-    { name: "奶茶 (L)", price: 30 },
-    { name: "豆漿 (M)", price: 20 },
-    { name: "豆漿 (L)", price: 25 },
-    { name: "鮮奶茶 (M)", price: 35 },
-    { name: "鮮奶茶 (L)", price: 45 },
-    { name: "財神奶茶 (M)", price: 40 },
-    { name: "財神奶茶 (L)", price: 50 },
-    { name: "美式咖啡 (M)", price: 35 },
-    { name: "美式咖啡 (L)", price: 45 },
-    { name: "拿鐵咖啡 (M)", price: 45 },
-    { name: "拿鐵咖啡 (L)", price: 55 },
-    { name: "綠果纖蔬 (M)", price: 40 },
-    { name: "綠果纖蔬 (L)", price: 50 },
+  Drinks: [
+    { name: "Drip Coffee (S)", price: 3 },
+    { name: "Drip Coffee (L)", price: 4 },
+    { name: "Latte (S)", price: 4.5 },
+    { name: "Latte (L)", price: 5.5 },
+    { name: "Orange Juice", price: 4 },
+    { name: "Iced Tea", price: 3 },
   ],
 };
 
 const CATEGORY_ORDER = Object.keys(CATEGORY_ITEMS);
 
 async function main() {
-  console.log("開始建立示範資料...");
+  console.log("Seeding demo data...");
+
+  const tenant = await prisma.tenant.upsert({
+    where: { slug: DEMO_SLUG },
+    update: {},
+    create: { slug: DEMO_SLUG, businessName: DEMO_BUSINESS_NAME },
+  });
 
   const branches = await Promise.all(
     [
       {
-        name: "中山店",
-        address: "台北市中山區中山北路二段 100 號",
-        phone: "02-2521-1234",
-        hours: "06:00 - 14:00",
+        name: "Downtown",
+        address: "100 Market St, Springfield",
+        phone: "555-0100",
+        hours: "7:00 AM - 3:00 PM",
       },
       {
-        name: "信義店",
-        address: "台北市信義區松仁路 50 號",
-        phone: "02-2758-5678",
-        hours: "06:00 - 14:00",
+        name: "Uptown",
+        address: "50 Main Ave, Springfield",
+        phone: "555-0150",
+        hours: "7:00 AM - 3:00 PM",
       },
     ].map((b) =>
       prisma.branch.upsert({
-        where: { name: b.name },
+        where: { tenantId_name: { tenantId: tenant.id, name: b.name } },
         update: {},
-        create: b,
+        create: { ...b, tenantId: tenant.id },
       })
     )
   );
 
-  // Only populate the menu when the database has none yet. This makes the seed
-  // safe to run on every deploy (e.g. from the Vercel build) without ever
-  // wiping the admin's availability toggles or any live data.
-  const existingItemCount = await prisma.menuItem.count();
+  const existingItemCount = await prisma.menuItem.count({ where: { tenantId: tenant.id } });
   if (existingItemCount === 0) {
     for (let i = 0; i < CATEGORY_ORDER.length; i++) {
       const categoryName = CATEGORY_ORDER[i];
       const category = await prisma.menuCategory.upsert({
-        where: { name: categoryName },
+        where: { tenantId_name: { tenantId: tenant.id, name: categoryName } },
         update: { sortOrder: i },
-        create: { name: categoryName, sortOrder: i },
+        create: { tenantId: tenant.id, name: categoryName, sortOrder: i },
       });
 
       const items = CATEGORY_ITEMS[categoryName];
@@ -136,6 +105,7 @@ async function main() {
         const item = items[j];
         await prisma.menuItem.create({
           data: {
+            tenantId: tenant.id,
             categoryId: category.id,
             name: item.name,
             price: item.price,
@@ -158,7 +128,7 @@ async function main() {
       });
       if (!existing) {
         await prisma.timeSlot.create({
-          data: { branchId: branch.id, method: "PICKUP", label, sortOrder: i },
+          data: { tenantId: tenant.id, branchId: branch.id, method: "PICKUP", label, sortOrder: i },
         });
       }
     }
@@ -169,23 +139,22 @@ async function main() {
       });
       if (!existing) {
         await prisma.timeSlot.create({
-          data: { branchId: branch.id, method: "DELIVERY", label, sortOrder: i },
+          data: { tenantId: tenant.id, branchId: branch.id, method: "DELIVERY", label, sortOrder: i },
         });
       }
     }
   }
 
-  const adminUsername = "admin";
-  const adminPassword = "fufu2026";
-  const passwordHash = await bcrypt.hash(adminPassword, 10);
+  const passwordHash = await bcrypt.hash(DEMO_ADMIN_PASSWORD, 10);
   await prisma.adminUser.upsert({
-    where: { username: adminUsername },
+    where: { email: DEMO_ADMIN_EMAIL },
     update: {},
-    create: { username: adminUsername, passwordHash },
+    create: { tenantId: tenant.id, email: DEMO_ADMIN_EMAIL, passwordHash },
   });
 
-  console.log("示範資料建立完成！");
-  console.log(`管理後台登入帳號：${adminUsername} / 密碼：${adminPassword}`);
+  console.log("Demo data ready!");
+  console.log(`Demo site: /${DEMO_SLUG}`);
+  console.log(`Demo admin login: ${DEMO_ADMIN_EMAIL} / ${DEMO_ADMIN_PASSWORD}`);
 }
 
 main()

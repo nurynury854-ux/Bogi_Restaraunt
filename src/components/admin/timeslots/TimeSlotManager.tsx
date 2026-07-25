@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import type { SerializedTimeSlot } from "@/lib/types";
 import { TIME_SLOT_METHODS, type TimeSlotMethod } from "@/lib/constants";
@@ -10,8 +10,8 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Field";
 
 const METHOD_LABEL: Record<TimeSlotMethod, string> = {
-  PICKUP: "自取時段",
-  DELIVERY: "外送時段",
+  PICKUP: "Pickup Slots",
+  DELIVERY: "Delivery Slots",
 };
 
 const POLL_INTERVAL_MS = 10000;
@@ -30,7 +30,9 @@ export function TimeSlotManager({
   });
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
-  busyRef.current = busy;
+  useEffect(() => {
+    busyRef.current = busy;
+  }, [busy]);
 
   const refresh = useCallback(async () => {
     try {
@@ -85,7 +87,7 @@ export function TimeSlotManager({
   }
 
   async function deleteSlot(id: string) {
-    if (!confirm("確定要刪除此時段嗎？")) return;
+    if (!confirm("Delete this time slot?")) return;
     setBusy(true);
     try {
       await fetch(`/api/timeslots/${id}`, { method: "DELETE" });
@@ -106,7 +108,7 @@ export function TimeSlotManager({
             <h2 className="font-semibold text-ink-900">{METHOD_LABEL[method]}</h2>
 
             {methodSlots.length === 0 && (
-              <p className="py-3 text-center text-sm text-ink-400">尚未設定時段</p>
+              <p className="py-3 text-center text-sm text-ink-400">No time slots yet</p>
             )}
 
             <ul className="flex flex-col gap-2">
@@ -128,7 +130,7 @@ export function TimeSlotManager({
                       disabled={busy}
                       className="cursor-pointer rounded-lg px-2.5 py-1 text-xs font-medium text-ink-500 hover:bg-ink-100"
                     >
-                      {slot.isActive ? "停用" : "啟用"}
+                      {slot.isActive ? "Disable" : "Enable"}
                     </button>
                     <button
                       onClick={() => deleteSlot(slot.id)}
@@ -144,7 +146,7 @@ export function TimeSlotManager({
 
             <div className="mt-1 flex gap-2">
               <Input
-                placeholder="例：12:00 - 12:30"
+                placeholder="e.g. 12:00 - 12:30"
                 value={newLabels[method]}
                 onChange={(e) => setNewLabels((prev) => ({ ...prev, [method]: e.target.value }))}
                 onKeyDown={(e) => e.key === "Enter" && addSlot(method)}

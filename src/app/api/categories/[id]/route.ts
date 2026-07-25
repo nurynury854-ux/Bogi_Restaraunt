@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdminSession } from "@/lib/adminAuth";
+import { assertTenantOwns, requireAdminSession } from "@/lib/adminAuth";
 import { handleApiError } from "@/lib/apiResponse";
 import { categoryUpdateSchema } from "@/lib/validation";
 
@@ -9,8 +9,11 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAdminSession();
+    const session = await requireAdminSession();
     const { id } = await params;
+    const existing = await prisma.menuCategory.findUnique({ where: { id } });
+    assertTenantOwns(existing, session.tenantId);
+
     const body = await request.json();
     const data = categoryUpdateSchema.parse(body);
     const category = await prisma.menuCategory.update({ where: { id }, data });
@@ -25,12 +28,15 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAdminSession();
+    const session = await requireAdminSession();
     const { id } = await params;
+    const existing = await prisma.menuCategory.findUnique({ where: { id } });
+    assertTenantOwns(existing, session.tenantId);
+
     const itemCount = await prisma.menuItem.count({ where: { categoryId: id } });
     if (itemCount > 0) {
       return NextResponse.json(
-        { error: "此分類尚有品項，請先移除或轉移品項後再刪除分類" },
+        { error: "This category still has items in it. Remove or move them first." },
         { status: 409 }
       );
     }

@@ -1,6 +1,10 @@
-// 福福早餐店 online ordering demo — Prisma schema (PostgreSQL)
+// Multi-tenant ordering platform — Prisma schema (PostgreSQL)
 // Status/method-style fields are plain Strings; allowed values are enforced in
 // the app layer (Zod + TS union types) to keep the model simple and portable.
+//
+// Tenant isolation: every tenant-scoped table carries its own `tenantId`
+// directly (not just via a parent relation), so queries can filter by it at
+// the top level instead of relying on a join chain to prove ownership.
 
 generator client {
   provider = "prisma-client"
@@ -11,9 +15,38 @@ datasource db {
   provider = "postgresql"
 }
 
+model Tenant {
+  id           String    @id @default(cuid())
+  slug         String    @unique
+  businessName String
+  logoUrl      String?
+  accentColor  String?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  adminUsers   AdminUser[]
+  branches     Branch[]
+  categories   MenuCategory[]
+  items        MenuItem[]
+  timeSlots    TimeSlot[]
+  orders       Order[]
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
 model Branch {
   id        String     @id @default(cuid())
-  name      String     @unique
+  tenantId  String
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
   address   String
   phone     String
   hours     String
@@ -23,25 +56,34 @@ model Branch {
 
   timeSlots TimeSlot[]
   orders    Order[]
+
+  @@unique([tenantId, name])
 }
 
 model MenuCategory {
   id        String     @id @default(cuid())
-  name      String     @unique
+  tenantId  String
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
   sortOrder Int        @default(0)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
   items     MenuItem[]
+
+  @@unique([tenantId, name])
 }
 
 model MenuItem {
   id          String       @id @default(cuid())
+  tenantId    String
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   categoryId  String
   category    MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   name        String
   price       Int
   description String?
+  imageUrl    String?
   isAvailable Boolean      @default(true)
   sortOrder   Int          @default(0)
   createdAt   DateTime     @default(now())
@@ -53,6 +95,8 @@ model MenuItem {
 /// method: "PICKUP" | "DELIVERY"
 model TimeSlot {
   id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   branchId  String
   branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
   method    String
@@ -65,19 +109,14 @@ model TimeSlot {
   orders    Order[]
 }
 
-model AdminUser {
-  id           String   @id @default(cuid())
-  username     String   @unique
-  passwordHash String
-  createdAt    DateTime @default(now())
-}
-
 /// diningMethod: "DINE_IN" | "PICKUP" | "DELIVERY"
-/// status: "PENDING" | "PREPARING" | "COMPLETED" | "CANCELLED"
+/// status: "PENDING" | "COMPLETED" | "CANCELLED"
 /// paymentMethod: "CASH" | "TRANSFER"
 model Order {
   id              String      @id @default(cuid())
-  orderNo         String      @unique
+  tenantId        String
+  tenant          Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orderNo         String
   branchId        String
   branch          Branch      @relation(fields: [branchId], references: [id], onDelete: Restrict)
   diningMethod    String
@@ -96,8 +135,9 @@ model Order {
 
   items           OrderItem[]
 
-  @@index([branchId])
-  @@index([status])
+  @@unique([tenantId, orderNo])
+  @@index([tenantId, branchId])
+  @@index([tenantId, status])
   @@index([createdAt])
 }
 

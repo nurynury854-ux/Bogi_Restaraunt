@@ -1,23 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdminSession } from "@/lib/adminAuth";
+import { assertTenantOwns, requireAdminSession } from "@/lib/adminAuth";
 import { handleApiError } from "@/lib/apiResponse";
 import { menuItemCreateSchema } from "@/lib/validation";
 
 export async function GET() {
-  const items = await prisma.menuItem.findMany({
-    orderBy: [{ categoryId: "asc" }, { sortOrder: "asc" }],
-    include: { category: true },
-  });
-  return NextResponse.json({ items });
+  try {
+    const session = await requireAdminSession();
+    const items = await prisma.menuItem.findMany({
+      where: { tenantId: session.tenantId },
+      orderBy: [{ categoryId: "asc" }, { sortOrder: "asc" }],
+      include: { category: true },
+    });
+    return NextResponse.json({ items });
+  } catch (error) {
+    return handleApiError(error);
+  }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAdminSession();
+    const session = await requireAdminSession();
     const body = await request.json();
     const data = menuItemCreateSchema.parse(body);
-    const item = await prisma.menuItem.create({ data });
+
+    const category = await prisma.menuCategory.findUnique({
+      where: { id: data.categoryId },
+    });
+    assertTenantOwns(category, session.tenantId);
+
+    const item = await prisma.menuItem.create({
+      data: { ...data, tenantId: session.tenantId },
+    });
     return NextResponse.json({ item }, { status: 201 });
   } catch (error) {
     return handleApiError(error);

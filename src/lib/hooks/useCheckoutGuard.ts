@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useOrderStore } from "@/lib/store/orderStore";
 
 export function useCheckoutGuard({ requireCart = true }: { requireCart?: boolean } = {}) {
   const router = useRouter();
+  const { tenantSlug } = useParams<{ tenantSlug: string }>();
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -14,18 +15,21 @@ export function useCheckoutGuard({ requireCart = true }: { requireCart?: boolean
     // Rehydrate from sessionStorage here, after hydration, then read the fresh
     // state directly instead of relying on selector values captured pre-rehydration.
     useOrderStore.persist.rehydrate();
-    const { branchId, diningMethod, cart } = useOrderStore.getState();
+    const state = useOrderStore.getState();
 
-    if (!branchId || !diningMethod) {
-      router.replace("/");
+    // A mismatched tenantSlug means this cart belongs to a different site
+    // (e.g. a stale bookmark, or the same tab visited another tenant) —
+    // treat it the same as having no selection at all for this site.
+    if (state.tenantSlug !== tenantSlug || !state.branchId || !state.diningMethod) {
+      router.replace(`/${tenantSlug}`);
       return;
     }
-    if (requireCart && cart.length === 0) {
-      router.replace("/menu");
+    if (requireCart && state.cart.length === 0) {
+      router.replace(`/${tenantSlug}/menu`);
       return;
     }
     setReady(true);
-  }, [requireCart, router]);
+  }, [requireCart, router, tenantSlug]);
 
   return ready;
 }

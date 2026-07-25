@@ -1,23 +1,25 @@
 import type { Metadata, Viewport } from "next";
-import { Noto_Sans_TC, Noto_Serif_TC } from "next/font/google";
+import { Inter, Fraunces } from "next/font/google";
 import { PageTransition } from "@/components/PageTransition";
+import { PLATFORM_NAME } from "@/lib/constants";
 import "./globals.css";
 
-const notoSansTC = Noto_Sans_TC({
-  variable: "--font-noto-sans-tc",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
 
-const notoSerifTC = Noto_Serif_TC({
-  variable: "--font-noto-serif-tc",
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
   subsets: ["latin"],
   weight: ["600", "700", "900"],
 });
 
 export const metadata: Metadata = {
-  title: "福福早餐店 | 線上點餐",
-  description: "福福早餐店線上點餐系統 — 中山店、信義店，內用、自取、外送皆可線上點餐。",
+  title: `${PLATFORM_NAME} — Online Ordering for Restaurants`,
+  description:
+    "Spin up your own branded online ordering site in minutes. Menus, locations, live orders — all self-serve.",
 };
 
 export const viewport: Viewport = {
@@ -36,9 +38,9 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="zh-Hant"
+      lang="en"
       data-scroll-behavior="smooth"
-      className={`${notoSansTC.variable} ${notoSerifTC.variable} h-full antialiased`}
+      className={`${inter.variable} ${fraunces.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <PageTransition>{children}</PageTransition>

@@ -14,7 +14,9 @@ import { useEffect, useRef } from "react";
  */
 export function usePolling(callback: () => void | Promise<void>, intervalMs: number) {
   const callbackRef = useRef(callback);
-  callbackRef.current = callback;
+  useEffect(() => {
+    callbackRef.current = callback;
+  }, [callback]);
 
   useEffect(() => {
     const tick = () => {

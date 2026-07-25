@@ -110,7 +110,7 @@ export function OrdersBoard({
 
       {groups.length === 0 && (
         <div className="rounded-2xl bg-white p-10 text-center text-ink-400 shadow-soft">
-          目前沒有{DINING_METHOD_LABEL[activeMethod]}的{mode === "pending" ? "待處理" : "已完成"}訂單
+          No {mode === "pending" ? "pending" : "completed"} {DINING_METHOD_LABEL[activeMethod].toLowerCase()} orders
         </div>
       )}
 

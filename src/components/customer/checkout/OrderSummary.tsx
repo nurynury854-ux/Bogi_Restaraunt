@@ -13,7 +13,7 @@ export function OrderSummary() {
   return (
     <Card className="flex flex-col gap-4 p-5">
       <div className="flex items-center justify-between">
-        <h2 className="font-semibold text-ink-900">訂單內容</h2>
+        <h2 className="font-semibold text-ink-900">Order Summary</h2>
         <span className="rounded-full bg-brand-100 px-2.5 py-1 text-xs font-medium text-brand-700">
           {branchName} · {diningMethod ? DINING_METHOD_LABEL[diningMethod] : ""}
         </span>
@@ -32,7 +32,7 @@ export function OrderSummary() {
       </ul>
 
       <div className="flex items-center justify-between border-t border-ink-100 pt-3 text-base font-semibold text-ink-900">
-        <span>總計</span>
+        <span>Total</span>
         <span className="text-brand-600">${total}</span>
       </div>
     </Card>

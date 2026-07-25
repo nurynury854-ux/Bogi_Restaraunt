@@ -12,6 +12,7 @@ export function BranchSettingsForm({ branch }: { branch: SerializedBranch }) {
   const router = useRouter();
   const [draft, setDraft] = useState(branch);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
   function update(patch: Partial<SerializedBranch>) {
     setDraft((prev) => ({ ...prev, ...patch }));
@@ -19,17 +20,24 @@ export function BranchSettingsForm({ branch }: { branch: SerializedBranch }) {
 
   async function save() {
     setBusy(true);
+    setError("");
     try {
-      await fetch(`/api/branches/${branch.id}`, {
+      const res = await fetch(`/api/branches/${branch.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          name: draft.name,
           address: draft.address,
           phone: draft.phone,
           hours: draft.hours,
           isActive: draft.isActive,
         }),
       });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Couldn't save changes");
+        return;
+      }
       router.refresh();
     } finally {
       setBusy(false);
@@ -42,33 +50,38 @@ export function BranchSettingsForm({ branch }: { branch: SerializedBranch }) {
         <h2 className="font-semibold text-ink-900">{branch.name}</h2>
         <div className="flex items-center gap-2">
           <Badge tone={draft.isActive ? "success" : "danger"}>
-            {draft.isActive ? "營業中" : "已停用"}
+            {draft.isActive ? "Active" : "Disabled"}
           </Badge>
           <button
             onClick={() => update({ isActive: !draft.isActive })}
             className="cursor-pointer rounded-lg border border-ink-100 px-2.5 py-1 text-xs font-medium text-ink-500 hover:bg-ink-100"
           >
-            {draft.isActive ? "停用" : "啟用"}
+            {draft.isActive ? "Disable" : "Enable"}
           </button>
         </div>
       </div>
 
       <p className="text-xs text-ink-400">
-        停用後顧客將無法在點餐首頁選擇這間分店，直到重新啟用為止。
+        Disabling this location hides it from the customer ordering page until it&apos;s enabled again.
       </p>
 
-      <FieldWrapper label="地址">
+      <FieldWrapper label="Location name">
+        <Input value={draft.name} onChange={(e) => update({ name: e.target.value })} />
+      </FieldWrapper>
+      <FieldWrapper label="Address">
         <Input value={draft.address} onChange={(e) => update({ address: e.target.value })} />
       </FieldWrapper>
-      <FieldWrapper label="電話">
+      <FieldWrapper label="Phone">
         <Input value={draft.phone} onChange={(e) => update({ phone: e.target.value })} />
       </FieldWrapper>
-      <FieldWrapper label="營業時間">
+      <FieldWrapper label="Hours">
         <Input value={draft.hours} onChange={(e) => update({ hours: e.target.value })} />
       </FieldWrapper>
 
+      {error && <p className="text-xs text-danger-500">{error}</p>}
+
       <Button size="sm" loading={busy} onClick={save} className="self-start">
-        儲存變更
+        Save Changes
       </Button>
     </Card>
   );

@@ -15,12 +15,13 @@ type CategoryWithItems = MenuCategory & { items: MenuItem[] };
 const MENU_POLL_INTERVAL_MS = 8000;
 
 export function MenuBrowser({
+  tenantSlug,
   categories: initialCategories,
 }: {
+  tenantSlug: string;
   categories: CategoryWithItems[];
 }) {
   const router = useRouter();
-  const branchId = useOrderStore((s) => s.branchId);
   const branchName = useOrderStore((s) => s.branchName);
   const diningMethod = useOrderStore((s) => s.diningMethod);
 
@@ -33,7 +34,7 @@ export function MenuBrowser({
   // re-read the public menu every few seconds so an item taken offline (or put
   // back) reflects without the customer refreshing.
   usePolling(() => {
-    fetch("/api/menu/public")
+    fetch(`/api/menu/public?tenant=${tenantSlug}`)
       .then((res) => res.json())
       .then((data: { categories: CategoryWithItems[] }) => setCategories(data.categories))
       .catch(() => null);
@@ -44,12 +45,12 @@ export function MenuBrowser({
     // instead of relying on the pre-rehydration selector values above.
     useOrderStore.persist.rehydrate();
     const state = useOrderStore.getState();
-    if (!state.branchId || !state.diningMethod) {
-      router.replace("/");
+    if (state.tenantSlug !== tenantSlug || !state.branchId || !state.diningMethod) {
+      router.replace(`/${tenantSlug}`);
       return;
     }
     setReady(true);
-  }, [router]);
+  }, [router, tenantSlug]);
 
   useEffect(() => {
     if (!ready) return;
@@ -85,7 +86,7 @@ export function MenuBrowser({
   );
 
   if (!ready) {
-    return <div className="flex flex-1 items-center justify-center text-ink-400">載入中...</div>;
+    return <div className="flex flex-1 items-center justify-center text-ink-400">Loading...</div>;
   }
 
   return (
@@ -93,11 +94,11 @@ export function MenuBrowser({
       <header className="sticky top-0 z-30 border-b border-ink-100 bg-cream-50/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <button
-            onClick={() => router.push("/")}
+            onClick={() => router.push(`/${tenantSlug}`)}
             className="flex cursor-pointer items-center gap-1 text-sm text-ink-500 transition-colors hover:text-brand-600"
           >
             <ChevronLeft className="size-4" />
-            重新選擇
+            Change
           </button>
           <div className="text-center">
             <p className="text-sm font-semibold text-ink-900">{branchName}</p>
@@ -146,7 +147,7 @@ export function MenuBrowser({
 
         <main className="min-w-0 flex-1">
           {totalItemCount === 0 && (
-            <p className="py-16 text-center text-ink-400">目前尚無供應中的餐點</p>
+            <p className="py-16 text-center text-ink-400">No items are available right now</p>
           )}
           <div className="flex flex-col gap-10 pb-32 lg:pb-6">
             {categories.map((cat) => (
@@ -173,13 +174,13 @@ export function MenuBrowser({
 
         {/* Desktop cart sidebar */}
         <aside className="sticky top-[76px] hidden h-fit w-80 shrink-0 lg:block">
-          <CartWidget variant="sidebar" />
+          <CartWidget variant="sidebar" tenantSlug={tenantSlug} />
         </aside>
       </div>
 
       {/* Mobile floating cart */}
       <div className="lg:hidden">
-        <CartWidget variant="mobile" />
+        <CartWidget variant="mobile" tenantSlug={tenantSlug} />
       </div>
     </div>
   );

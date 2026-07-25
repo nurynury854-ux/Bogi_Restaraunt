@@ -5,28 +5,38 @@ import { handleApiError } from "@/lib/apiResponse";
 import { createOrderSchema } from "@/lib/validation";
 import { generateOrderNumber } from "@/lib/orderNumber";
 import { PENDING_STATUSES, COMPLETED_STATUSES } from "@/lib/constants";
+import { getTenantBySlug, isTenantUsable } from "@/lib/tenant";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const data = createOrderSchema.parse(body);
 
+    const tenant = await getTenantBySlug(data.tenantSlug);
+    if (!isTenantUsable(tenant)) {
+      return NextResponse.json({ error: "Store not found" }, { status: 404 });
+    }
+    const tenantId = tenant!.id;
+
     const branch = await prisma.branch.findUnique({ where: { id: data.branchId } });
-    if (!branch || !branch.isActive) {
-      return NextResponse.json({ error: "分店不存在或暫停營業" }, { status: 400 });
+    if (!branch || branch.tenantId !== tenantId || !branch.isActive) {
+      return NextResponse.json({ error: "This location isn't available" }, { status: 400 });
     }
 
     const menuItemIds = data.items.map((i) => i.menuItemId);
     const menuItems = await prisma.menuItem.findMany({
-      where: { id: { in: menuItemIds } },
+      where: { id: { in: menuItemIds }, tenantId },
     });
     if (menuItems.length !== new Set(menuItemIds).size) {
-      return NextResponse.json({ error: "部分餐點已不存在，請重新確認購物車" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Some items in your cart no longer exist — please check your cart" },
+        { status: 400 }
+      );
     }
     const unavailable = menuItems.find((m) => !m.isAvailable);
     if (unavailable) {
       return NextResponse.json(
-        { error: `「${unavailable.name}」目前無法供應，請從購物車移除`, },
+        { error: `"${unavailable.name}" is no longer available — please remove it from your cart` },
         { status: 400 }
       );
     }
@@ -36,11 +46,15 @@ export async function POST(request: NextRequest) {
       const expectedMethod = data.diningMethod === "DELIVERY" ? "DELIVERY" : "PICKUP";
       if (
         !slot ||
+        slot.tenantId !== tenantId ||
         !slot.isActive ||
         slot.branchId !== data.branchId ||
         slot.method !== expectedMethod
       ) {
-        return NextResponse.json({ error: "所選時段已不可用，請重新選擇" }, { status: 400 });
+        return NextResponse.json(
+          { error: "That time slot is no longer available — please pick another" },
+          { status: 400 }
+        );
       }
     }
 
@@ -55,10 +69,11 @@ export async function POST(request: NextRequest) {
       };
     });
     const totalAmount = itemsWithPrice.reduce((sum, i) => sum + i.subtotal, 0);
-    const orderNo = await generateOrderNumber();
+    const orderNo = await generateOrderNumber(tenantId, tenant!.slug.slice(0, 3).toUpperCase());
 
     const order = await prisma.order.create({
       data: {
+        tenantId,
         orderNo,
         branchId: data.branchId,
         diningMethod: data.diningMethod,
@@ -83,7 +98,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAdminSession();
+    const session = await requireAdminSession();
     const params = request.nextUrl.searchParams;
     const branchId = params.get("branchId");
     const status = params.get("status");
@@ -99,6 +114,7 @@ export async function GET(request: NextRequest) {
 
     const orders = await prisma.order.findMany({
       where: {
+        tenantId: session.tenantId,
         ...(branchId ? { branchId } : {}),
         ...(bucketStatuses ? { status: { in: bucketStatuses } } : {}),
         ...(status ? { status } : {}),
