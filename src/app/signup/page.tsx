@@ -76,7 +76,6 @@ export default function SignupPage() {
         return;
       }
       router.push(`/${data.tenantSlug}/admin`);
-      router.refresh();
     } catch {
       setError("Network error — please try again");
       setLoading(false);

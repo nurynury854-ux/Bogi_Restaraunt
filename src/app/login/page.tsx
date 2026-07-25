@@ -35,7 +35,6 @@ function LoginForm() {
       }
       const next = searchParams.get("next") || `/${data.tenantSlug}/admin`;
       router.replace(next);
-      router.refresh();
     } catch {
       setError("Network error — please try again");
       setLoading(false);
