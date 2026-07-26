@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import { ClientRedirect } from "@/components/ClientRedirect";
 
 export default async function BranchPanelIndex({
   params,
@@ -6,5 +6,5 @@ export default async function BranchPanelIndex({
   params: Promise<{ tenantSlug: string; branchId: string }>;
 }) {
   const { tenantSlug, branchId } = await params;
-  redirect(`/${tenantSlug}/admin/${branchId}/orders/pending`);
+  return <ClientRedirect href={`/${tenantSlug}/admin/${branchId}/orders/pending`} />;
 }

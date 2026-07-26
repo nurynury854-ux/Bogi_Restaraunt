@@ -1,9 +1,9 @@
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getAdminSession } from "@/lib/adminAuth";
 import { getTenantBySlug } from "@/lib/tenant";
 import { AdminBranchCards } from "@/components/admin/AdminBranchCards";
 import { AdminTopBar } from "@/components/admin/AdminTopBar";
+import { ClientRedirect } from "@/components/ClientRedirect";
 import Link from "next/link";
 import { Settings } from "lucide-react";
 
@@ -23,7 +23,7 @@ export default async function AdminBranchSelectPage({
   });
 
   if (branches.length === 1) {
-    redirect(`/${tenantSlug}/admin/${branches[0].id}`);
+    return <ClientRedirect href={`/${tenantSlug}/admin/${branches[0].id}`} />;
   }
 
   return (
