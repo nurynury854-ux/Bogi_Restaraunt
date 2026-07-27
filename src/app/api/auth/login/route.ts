@@ -4,9 +4,15 @@ import { prisma } from "@/lib/prisma";
 import { handleApiError } from "@/lib/apiResponse";
 import { adminLoginSchema } from "@/lib/validation";
 import { ADMIN_SESSION_COOKIE, signAdminSession } from "@/lib/session";
+import { rateLimit, enforceBodyLimit, RATE_LIMITS, BODY_LIMITS } from "@/lib/rateLimit";
 
 export async function POST(request: NextRequest) {
   try {
+    const limited = rateLimit(request, "login", RATE_LIMITS.login);
+    if (limited) return limited;
+    const tooLarge = enforceBodyLimit(request, BODY_LIMITS.json);
+    if (tooLarge) return tooLarge;
+
     const body = await request.json();
     const { email, password } = adminLoginSchema.parse(body);
 

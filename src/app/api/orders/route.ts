@@ -6,9 +6,15 @@ import { createOrderSchema } from "@/lib/validation";
 import { generateOrderNumber } from "@/lib/orderNumber";
 import { PENDING_STATUSES, COMPLETED_STATUSES } from "@/lib/constants";
 import { getTenantBySlug, isTenantUsable } from "@/lib/tenant";
+import { rateLimit, enforceBodyLimit, RATE_LIMITS, BODY_LIMITS } from "@/lib/rateLimit";
 
 export async function POST(request: NextRequest) {
   try {
+    const limited = rateLimit(request, "order", RATE_LIMITS.orderCreate);
+    if (limited) return limited;
+    const tooLarge = enforceBodyLimit(request, BODY_LIMITS.order);
+    if (tooLarge) return tooLarge;
+
     const body = await request.json();
     const data = createOrderSchema.parse(body);
 

@@ -23,7 +23,10 @@ export const createOrderSchema = z
     tenantSlug: z.string().min(1, "Missing store"),
     branchId: z.string().min(1, "Please select a location"),
     diningMethod: z.enum(DINING_METHODS),
-    items: z.array(orderItemSchema).min(1, "Your cart is empty"),
+    items: z
+      .array(orderItemSchema)
+      .min(1, "Your cart is empty")
+      .max(100, "That's too many items for one order"),
     tableNumber: z.string().trim().max(20).optional(),
     timeSlotId: z.string().min(1).optional(),
     customerName: z.string().trim().min(1, "Please enter your name").max(60),

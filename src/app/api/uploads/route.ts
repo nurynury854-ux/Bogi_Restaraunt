@@ -2,12 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import { requireAdminSession } from "@/lib/adminAuth";
 import { handleApiError } from "@/lib/apiResponse";
+import { rateLimit, enforceBodyLimit, RATE_LIMITS } from "@/lib/rateLimit";
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 export async function POST(request: NextRequest) {
   try {
+    const limited = rateLimit(request, "upload", RATE_LIMITS.upload);
+    if (limited) return limited;
+    // Reject oversized uploads by declared size before buffering the file.
+    const tooLarge = enforceBodyLimit(request, MAX_BYTES + 1024 * 1024);
+    if (tooLarge) return tooLarge;
+
     const session = await requireAdminSession();
 
     const form = await request.formData();

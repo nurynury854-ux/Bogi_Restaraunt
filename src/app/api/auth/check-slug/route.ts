@@ -3,9 +3,15 @@ import { prisma } from "@/lib/prisma";
 import { handleApiError } from "@/lib/apiResponse";
 import { checkSlugSchema } from "@/lib/validation";
 import { isSlugAllowed } from "@/lib/reservedSlugs";
+import { rateLimit, enforceBodyLimit, RATE_LIMITS, BODY_LIMITS } from "@/lib/rateLimit";
 
 export async function POST(request: NextRequest) {
   try {
+    const limited = rateLimit(request, "check-slug", RATE_LIMITS.checkSlug);
+    if (limited) return limited;
+    const tooLarge = enforceBodyLimit(request, BODY_LIMITS.json);
+    if (tooLarge) return tooLarge;
+
     const body = await request.json();
     const { slug } = checkSlugSchema.parse(body);
 

@@ -5,9 +5,15 @@ import { handleApiError } from "@/lib/apiResponse";
 import { signupSchema } from "@/lib/validation";
 import { isSlugAllowed } from "@/lib/reservedSlugs";
 import { ADMIN_SESSION_COOKIE, signAdminSession } from "@/lib/session";
+import { rateLimit, enforceBodyLimit, RATE_LIMITS, BODY_LIMITS } from "@/lib/rateLimit";
 
 export async function POST(request: NextRequest) {
   try {
+    const limited = rateLimit(request, "signup", RATE_LIMITS.signup);
+    if (limited) return limited;
+    const tooLarge = enforceBodyLimit(request, BODY_LIMITS.json);
+    if (tooLarge) return tooLarge;
+
     const body = await request.json();
     const data = signupSchema.parse(body);
     const slug = data.slug.toLowerCase();
