@@ -1,12 +1,23 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "@/lib/session";
+import { PLATFORM_SESSION_COOKIE, verifyPlatformSession } from "@/lib/platformAuth";
 
 // Matches /{tenantSlug}/admin and everything under it.
 const ADMIN_PATH = /^\/([^/]+)\/admin(\/.*)?$/;
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  if (pathname === "/platform-admin" || pathname.startsWith("/platform-admin/")) {
+    if (pathname === "/platform-admin/login") return NextResponse.next();
+    const token = request.cookies.get(PLATFORM_SESSION_COOKIE)?.value;
+    if (!verifyPlatformSession(token)) {
+      return NextResponse.redirect(new URL("/platform-admin/login", request.url));
+    }
+    return NextResponse.next();
+  }
+
   const match = pathname.match(ADMIN_PATH);
   if (!match) return NextResponse.next();
 
@@ -26,5 +37,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/:tenantSlug/admin/:path*"],
+  matcher: ["/:tenantSlug/admin/:path*", "/platform-admin/:path*"],
 };

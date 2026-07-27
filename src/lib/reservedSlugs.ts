@@ -3,6 +3,7 @@
 // obviously not appropriate as a business's public URL segment.
 export const RESERVED_SLUGS = new Set([
   "admin",
+  "platform-admin",
   "api",
   "login",
   "logout",

@@ -20,7 +20,11 @@ This started as a single-restaurant demo and was rebuilt into a real multi-tenan
 1. **Postgres database.** Vercel project → **Storage** tab → **Create Database** → Neon/Postgres (auto-adds `DATABASE_URL`), or bring your own from [neon.tech](https://neon.tech) / [supabase.com](https://supabase.com) and add `DATABASE_URL` under Settings → Environment Variables.
 2. **`SESSION_SECRET`** environment variable — any long random string (signs the admin session cookie). Generate one with `openssl rand -hex 32`.
 3. **Vercel Blob storage** (needed for logo/menu photo uploads) — Vercel project → **Storage** tab → **Create Database** → **Blob**. This automatically adds a `BLOB_READ_WRITE_TOKEN` environment variable. Without this, the app still works, but image uploads will fail.
-4. **Set up the database schema once**, from your own computer:
+4. **Platform-admin dashboard credentials** — three more environment variables, for the owner-only tenant-management dashboard at `/platform-admin` (see below):
+   - `PLATFORM_ADMIN_EMAIL` — the email you'll log in with.
+   - `PLATFORM_ADMIN_PASSWORD` — any strong password.
+   - `PLATFORM_SESSION_SECRET` — another long random string, generated the same way as `SESSION_SECRET` (`openssl rand -hex 32`) — keep it different from `SESSION_SECRET` so a leak of one can't be used to forge the other. Until these three are set, `/platform-admin` has no valid credentials and login always fails.
+5. **Set up the database schema once**, from your own computer:
    ```bash
    npm install
    ```
@@ -33,7 +37,7 @@ This started as a single-restaurant demo and was rebuilt into a real multi-tenan
    npm run db:setup
    ```
    This creates the tables and loads one example tenant (see below) so there's something to click through immediately.
-5. **Deploy.** The build runs `prisma generate` automatically.
+6. **Deploy.** The build runs `prisma generate` automatically.
 
 ### Demo tenant (seeded automatically)
 
@@ -69,6 +73,9 @@ This is the part that matters most in a multi-tenant app. Every admin session is
 - **Menu Management**: full add/edit/delete for categories and items, including photo upload per item, plus an availability toggle. Shared across all of a tenant's locations.
 - **Locations**: add/edit locations (name, address, phone, hours), each with its own time slots; disable a location to hide it from ordering.
 - **Site Settings**: business name, logo upload, and a brand accent color that actually re-themes that tenant's customer-facing site.
+
+### Platform-admin dashboard (you, not tenants)
+At `/platform-admin`, gated by the `PLATFORM_ADMIN_EMAIL`/`PLATFORM_ADMIN_PASSWORD`/`PLATFORM_SESSION_SECRET` env vars above — completely separate login and session cookie from tenant admin accounts, so a compromised tenant login can never reach it. Lists every tenant (search by name/URL, paginated), with each row showing the owner's email, location count, order count, and signup date. Actions: suspend/reactivate a tenant (immediately blocks their admin login and their public site), or permanently delete a tenant and everything under it (locations, menu, orders, admin accounts) — delete requires typing the tenant's slug to confirm.
 
 ### Live updates
 New orders, order status changes, time-slot edits, and menu changes all propagate automatically — no manual refresh anywhere. Every screen quietly re-checks the database every few seconds (~4s on the admin order boards/alert, ~8–10s elsewhere) and pauses while the tab is in the background. This polling approach (rather than a persistent push connection) is what makes it work reliably on Vercel's serverless hosting.

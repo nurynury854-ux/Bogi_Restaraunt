@@ -144,6 +144,10 @@ export const checkSlugSchema = z.object({
   slug: z.string().trim().min(1).max(40),
 });
 
+export const platformTenantUpdateSchema = z.object({
+  isActive: z.boolean(),
+});
+
 export const signupSchema = z.object({
   email: z.string().trim().min(1, "Please enter your email").email("Enter a valid email"),
   password: z.string().min(8, "Password must be at least 8 characters"),
