@@ -102,6 +102,8 @@ export async function POST(request: NextRequest) {
   }
 }
 
+const HISTORY_PAGE_SIZE = 25;
+
 export async function GET(request: NextRequest) {
   try {
     const session = await requireAdminSession();
@@ -110,6 +112,11 @@ export async function GET(request: NextRequest) {
     const status = params.get("status");
     const bucket = params.get("bucket"); // "pending" | "completed"
     const diningMethod = params.get("diningMethod");
+    const orderNo = params.get("orderNo")?.trim();
+    const phone = params.get("phone")?.trim();
+    const dateFrom = params.get("dateFrom");
+    const dateTo = params.get("dateTo");
+    const page = params.get("page");
 
     const bucketStatuses =
       bucket === "pending"
@@ -118,14 +125,44 @@ export async function GET(request: NextRequest) {
           ? COMPLETED_STATUSES
           : null;
 
+    const where = {
+      tenantId: session.tenantId,
+      ...(branchId ? { branchId } : {}),
+      ...(bucketStatuses ? { status: { in: bucketStatuses } } : {}),
+      ...(status ? { status } : {}),
+      ...(diningMethod ? { diningMethod } : {}),
+      ...(orderNo ? { orderNo: { contains: orderNo, mode: "insensitive" as const } } : {}),
+      ...(phone ? { customerPhone: { contains: phone } } : {}),
+      ...(dateFrom || dateTo
+        ? {
+            createdAt: {
+              ...(dateFrom ? { gte: new Date(`${dateFrom}T00:00:00`) } : {}),
+              ...(dateTo ? { lte: new Date(`${dateTo}T23:59:59.999`) } : {}),
+            },
+          }
+        : {}),
+    };
+
+    // Pagination is opt-in (only when `page` is passed) so the existing
+    // pending/completed boards — which poll this endpoint every few seconds
+    // without a `page` param — keep their current unpaginated response shape.
+    if (page) {
+      const pageNum = Math.max(1, Number(page) || 1);
+      const [orders, total] = await Promise.all([
+        prisma.order.findMany({
+          where,
+          include: { items: true, branch: true, timeSlot: true },
+          orderBy: { createdAt: "desc" },
+          skip: (pageNum - 1) * HISTORY_PAGE_SIZE,
+          take: HISTORY_PAGE_SIZE,
+        }),
+        prisma.order.count({ where }),
+      ]);
+      return NextResponse.json({ orders, total, page: pageNum, pageSize: HISTORY_PAGE_SIZE });
+    }
+
     const orders = await prisma.order.findMany({
-      where: {
-        tenantId: session.tenantId,
-        ...(branchId ? { branchId } : {}),
-        ...(bucketStatuses ? { status: { in: bucketStatuses } } : {}),
-        ...(status ? { status } : {}),
-        ...(diningMethod ? { diningMethod } : {}),
-      },
+      where,
       include: { items: true, branch: true, timeSlot: true },
       orderBy: { createdAt: "desc" },
       take: 300,

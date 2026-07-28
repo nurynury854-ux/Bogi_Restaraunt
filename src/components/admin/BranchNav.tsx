@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  LayoutDashboard,
   Clock3,
   CheckCircle2,
+  History,
   UtensilsCrossed,
   CalendarClock,
   Settings,
@@ -22,8 +24,10 @@ export function BranchNav({
   const base = `/${tenantSlug}/admin/${branchId}`;
 
   const items = [
+    { href: `${base}/dashboard`, label: "Dashboard", icon: LayoutDashboard },
     { href: `${base}/orders/pending`, label: "Pending", icon: Clock3 },
     { href: `${base}/orders/completed`, label: "Completed", icon: CheckCircle2 },
+    { href: `${base}/orders/history`, label: "History", icon: History },
     { href: `${base}/menu`, label: "Menu", icon: UtensilsCrossed },
     { href: `${base}/timeslots`, label: "Time Slots", icon: CalendarClock },
   ];

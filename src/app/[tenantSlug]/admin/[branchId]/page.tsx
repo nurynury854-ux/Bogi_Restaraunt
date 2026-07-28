@@ -6,5 +6,5 @@ export default async function BranchPanelIndex({
   params: Promise<{ tenantSlug: string; branchId: string }>;
 }) {
   const { tenantSlug, branchId } = await params;
-  return <ClientRedirect href={`/${tenantSlug}/admin/${branchId}/orders/pending`} />;
+  return <ClientRedirect href={`/${tenantSlug}/admin/${branchId}/dashboard`} />;
 }
