@@ -28,33 +28,43 @@ export default function SignupPage() {
 
   const checkTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Auto-derive the URL slug from the business name until the user edits it directly.
+  // Auto-derive the URL slug from the business name until the user edits it
+  // directly. Deferred so the setState isn't synchronous within the effect body.
   useEffect(() => {
-    if (!slugEdited) setSlug(slugify(businessName));
+    if (slugEdited) return;
+    const id = setTimeout(() => setSlug(slugify(businessName)), 0);
+    return () => clearTimeout(id);
   }, [businessName, slugEdited]);
 
   useEffect(() => {
-    if (checkTimer.current) clearTimeout(checkTimer.current);
-    if (!slug || slug.length < 3) {
-      setSlugStatus("idle");
-      return;
-    }
-    setSlugStatus("checking");
-    checkTimer.current = setTimeout(async () => {
-      try {
-        const res = await fetch("/api/auth/check-slug", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slug }),
-        });
-        const data = await res.json();
-        setSlugStatus(data.available ? "available" : "unavailable");
-        setSlugReason(data.reason ?? "");
-      } catch {
+    // The whole body is deferred one tick for the same reason — both
+    // setSlugStatus("idle") and setSlugStatus("checking") below would
+    // otherwise run synchronously within the effect. Cleanup has to clear
+    // both this scheduling timeout and the debounce timer it may have set.
+    const scheduleId = setTimeout(() => {
+      if (checkTimer.current) clearTimeout(checkTimer.current);
+      if (!slug || slug.length < 3) {
         setSlugStatus("idle");
+        return;
       }
-    }, 400);
+      setSlugStatus("checking");
+      checkTimer.current = setTimeout(async () => {
+        try {
+          const res = await fetch("/api/auth/check-slug", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ slug }),
+          });
+          const data = await res.json();
+          setSlugStatus(data.available ? "available" : "unavailable");
+          setSlugReason(data.reason ?? "");
+        } catch {
+          setSlugStatus("idle");
+        }
+      }, 400);
+    }, 0);
     return () => {
+      clearTimeout(scheduleId);
       if (checkTimer.current) clearTimeout(checkTimer.current);
     };
   }, [slug]);

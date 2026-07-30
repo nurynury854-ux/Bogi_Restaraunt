@@ -52,7 +52,10 @@ export default function CheckoutDetailsPage() {
 
   useEffect(() => {
     if (!ready) return;
-    refetchSlots();
+    // Deferred so refetchSlots' setLoadingSlots(true) isn't synchronous
+    // within the effect body.
+    const id = setTimeout(refetchSlots, 0);
+    return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, needsSlot, branchId, slotMethod]);
 

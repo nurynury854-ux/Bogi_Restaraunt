@@ -19,7 +19,9 @@ export default function CheckoutSuccessPage() {
       router.replace(`/${tenantSlug}`);
       return;
     }
-    setReady(true);
+    // Deferred so the setState isn't synchronous within the effect body.
+    const id = setTimeout(() => setReady(true), 0);
+    return () => clearTimeout(id);
   }, [router, tenantSlug]);
 
   if (!ready) return null;

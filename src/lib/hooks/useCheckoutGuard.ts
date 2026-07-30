@@ -28,7 +28,9 @@ export function useCheckoutGuard({ requireCart = true }: { requireCart?: boolean
       router.replace(`/${tenantSlug}/menu`);
       return;
     }
-    setReady(true);
+    // Deferred so the setState isn't synchronous within the effect body.
+    const id = setTimeout(() => setReady(true), 0);
+    return () => clearTimeout(id);
   }, [requireCart, router, tenantSlug]);
 
   return ready;
