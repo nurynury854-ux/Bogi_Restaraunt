@@ -7,6 +7,7 @@ import { generateOrderNumber } from "@/lib/orderNumber";
 import { PENDING_STATUSES, COMPLETED_STATUSES } from "@/lib/constants";
 import { getTenantBySlug, isTenantUsable } from "@/lib/tenant";
 import { rateLimit, enforceBodyLimit, RATE_LIMITS, BODY_LIMITS } from "@/lib/rateLimit";
+import { todayPartsInTimezone, dateOnlyUTC } from "@/lib/timezone";
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,12 +30,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "This location isn't available" }, { status: 400 });
     }
 
-    const today = new Date();
+    const todayParts = todayPartsInTimezone(tenant!.timezone);
     const closure = await prisma.branchClosure.findUnique({
       where: {
         branchId_date: {
           branchId: data.branchId,
-          date: new Date(today.getFullYear(), today.getMonth(), today.getDate()),
+          date: dateOnlyUTC(todayParts.year, todayParts.month, todayParts.day),
         },
       },
     });

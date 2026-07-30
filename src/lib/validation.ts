@@ -5,6 +5,14 @@ import {
   TIME_SLOT_METHODS,
   ORDER_STATUSES,
 } from "@/lib/constants";
+import { isValidTimezone } from "@/lib/timezone";
+
+const timezoneSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(100)
+  .refine(isValidTimezone, "Not a recognized timezone");
 
 const phoneSchema = z
   .string()
@@ -87,6 +95,7 @@ export const branchUpdateSchema = z.object({
 export const tenantSettingsUpdateSchema = z.object({
   businessName: z.string().trim().min(1, "Please enter a business name").max(80).optional(),
   logoUrl: z.string().trim().url().max(600).nullable().optional(),
+  timezone: timezoneSchema.optional(),
   accentColor: z
     .string()
     .trim()
@@ -205,4 +214,5 @@ export const signupSchema = z.object({
     .min(3, "URL must be at least 3 characters")
     .max(40, "URL is too long"),
   branchName: z.string().trim().min(1, "Please enter a location name").max(60),
+  timezone: timezoneSchema.optional(),
 });

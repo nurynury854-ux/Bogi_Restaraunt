@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { assertTenantOwns, requireAdminSession } from "@/lib/adminAuth";
 import { handleApiError } from "@/lib/apiResponse";
 import { branchClosureCreateSchema } from "@/lib/validation";
+import { dateOnlyUTC } from "@/lib/timezone";
 
 export async function GET(
   _request: NextRequest,
@@ -37,15 +38,11 @@ export async function POST(
     const body = await request.json();
     const data = branchClosureCreateSchema.parse(body);
     const [year, month, day] = data.date.split("-").map(Number);
+    const date = dateOnlyUTC(year, month, day);
 
     const closure = await prisma.branchClosure.upsert({
-      where: { branchId_date: { branchId, date: new Date(year, month - 1, day) } },
-      create: {
-        branchId,
-        tenantId: session.tenantId,
-        date: new Date(year, month - 1, day),
-        reason: data.reason,
-      },
+      where: { branchId_date: { branchId, date } },
+      create: { branchId, tenantId: session.tenantId, date, reason: data.reason },
       update: { reason: data.reason },
     });
     return NextResponse.json({ closure }, { status: 201 });

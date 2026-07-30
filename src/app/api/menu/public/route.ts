@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getTenantBySlug, isTenantUsable } from "@/lib/tenant";
+import { todayPartsInTimezone, dateOnlyUTC } from "@/lib/timezone";
 
 export const dynamic = "force-dynamic";
 
@@ -19,12 +20,12 @@ export async function GET(request: NextRequest) {
   let closedToday = false;
   let closedReason: string | null = null;
   if (branchId) {
-    const today = new Date();
+    const todayParts = todayPartsInTimezone(tenant!.timezone);
     const closure = await prisma.branchClosure.findUnique({
       where: {
         branchId_date: {
           branchId,
-          date: new Date(today.getFullYear(), today.getMonth(), today.getDate()),
+          date: dateOnlyUTC(todayParts.year, todayParts.month, todayParts.day),
         },
       },
     });

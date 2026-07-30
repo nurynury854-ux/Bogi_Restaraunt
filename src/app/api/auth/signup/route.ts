@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     const { tenant, admin } = await prisma.$transaction(async (tx) => {
       const tenant = await tx.tenant.create({
-        data: { slug, businessName: data.businessName },
+        data: { slug, businessName: data.businessName, timezone: data.timezone ?? "UTC" },
       });
       await tx.branch.create({
         data: {

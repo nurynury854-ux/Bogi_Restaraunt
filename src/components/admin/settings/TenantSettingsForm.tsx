@@ -1,22 +1,28 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Upload } from "lucide-react";
 import type { SerializedTenant } from "@/lib/types";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { FieldWrapper, Input } from "@/components/ui/Field";
+import { FieldWrapper, Input, Select } from "@/components/ui/Field";
+
+const ALL_TIMEZONES: string[] =
+  typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : ["UTC"];
 
 export function TenantSettingsForm({ tenant }: { tenant: SerializedTenant }) {
   const router = useRouter();
   const [businessName, setBusinessName] = useState(tenant.businessName);
   const [logoUrl, setLogoUrl] = useState(tenant.logoUrl ?? "");
   const [accentColor, setAccentColor] = useState(tenant.accentColor ?? "#c8722e");
+  const [timezone, setTimezone] = useState(tenant.timezone);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const detectedTimezone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, []);
 
   async function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -47,7 +53,7 @@ export function TenantSettingsForm({ tenant }: { tenant: SerializedTenant }) {
       const res = await fetch("/api/tenant", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ businessName, logoUrl: logoUrl || null, accentColor }),
+        body: JSON.stringify({ businessName, logoUrl: logoUrl || null, accentColor, timezone }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -100,6 +106,29 @@ export function TenantSettingsForm({ tenant }: { tenant: SerializedTenant }) {
             </Button>
           </div>
         </div>
+      </FieldWrapper>
+
+      <FieldWrapper
+        label="Timezone"
+        hint='Used to figure out what "today" means for closed-date overrides'
+      >
+        <Select value={timezone} onChange={(e) => setTimezone(e.target.value)}>
+          {!ALL_TIMEZONES.includes(timezone) && <option value={timezone}>{timezone}</option>}
+          {ALL_TIMEZONES.map((tz) => (
+            <option key={tz} value={tz}>
+              {tz}
+            </option>
+          ))}
+        </Select>
+        {detectedTimezone !== timezone && (
+          <button
+            type="button"
+            onClick={() => setTimezone(detectedTimezone)}
+            className="mt-1 cursor-pointer text-xs font-medium text-brand-600 hover:text-brand-700"
+          >
+            Use detected timezone ({detectedTimezone})
+          </button>
+        )}
       </FieldWrapper>
 
       <FieldWrapper label="Brand color" hint="Used as an accent color on your site">
