@@ -85,37 +85,40 @@ export function NewOrderNotifier({ branchId }: { branchId: string }) {
   }
 
   return (
-    <>
+    // Button and toasts share one positioned container (stacked via flex gap)
+    // instead of two independently-offset `fixed` elements — those previously
+    // drifted out of sync with each other and, at top-16, sat low enough to
+    // overlap BranchNav's "Location Settings" link underneath. top-28 here
+    // clears both AdminTopBar and BranchNav with margin to spare.
+    <div className="fixed inset-x-3 top-28 z-50 flex flex-col items-end gap-2 sm:inset-x-auto sm:right-5 sm:w-80">
       <button
         onClick={toggleSound}
-        className="fixed right-3 top-16 z-50 flex items-center gap-1.5 rounded-full border border-ink-100 bg-white px-3 py-1.5 text-xs text-ink-500 shadow-soft transition-colors hover:border-brand-300 sm:right-5"
+        className="flex items-center gap-1.5 rounded-full border border-ink-100 bg-white px-3 py-1.5 text-xs text-ink-500 shadow-soft transition-colors hover:border-brand-300"
       >
         {soundOn ? <Bell className="size-3.5 text-brand-500" /> : <BellOff className="size-3.5" />}
         New order sound: {soundOn ? "On" : "Off"}
       </button>
 
-      <div className="fixed inset-x-3 top-28 z-50 flex flex-col gap-2 sm:inset-x-auto sm:right-5 sm:w-80">
-        <AnimatePresence>
-          {toasts.map((order) => (
-            <motion.div
-              key={order.id}
-              initial={{ opacity: 0, x: 40 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 40 }}
-              transition={{ duration: 0.25 }}
-              className="flex items-start gap-3 rounded-2xl bg-ink-900 px-4 py-3.5 text-white shadow-lift"
-            >
-              <PartyPopper className="mt-0.5 size-5 shrink-0 text-gold-400" />
-              <div className="min-w-0">
-                <p className="text-sm font-semibold">New order! {order.orderNo}</p>
-                <p className="truncate text-xs text-white/70">
-                  {order.customerName} · ${order.totalAmount}
-                </p>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
-    </>
+      <AnimatePresence>
+        {toasts.map((order) => (
+          <motion.div
+            key={order.id}
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 40 }}
+            transition={{ duration: 0.25 }}
+            className="flex w-full items-start gap-3 rounded-2xl bg-ink-900 px-4 py-3.5 text-white shadow-lift"
+          >
+            <PartyPopper className="mt-0.5 size-5 shrink-0 text-gold-400" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold">New order! {order.orderNo}</p>
+              <p className="truncate text-xs text-white/70">
+                {order.customerName} · ${order.totalAmount}
+              </p>
+            </div>
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </div>
   );
 }
