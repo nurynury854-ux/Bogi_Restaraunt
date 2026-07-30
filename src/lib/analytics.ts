@@ -1,8 +1,6 @@
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
 export interface DailyBucket {
   dateKey: string;
-  label: string;
+  dayOfMonth: number;
   orderCount: number;
   revenue: number;
 }
@@ -15,29 +13,22 @@ function dateKeyOfDate(d: Date): string {
 }
 
 /**
- * Buckets orders into one entry per local calendar day, oldest to newest,
- * covering exactly the last `days` days including today (so the last entry
- * is always "today" — callers needing just today's numbers can read the
- * final bucket instead of re-deriving them separately).
+ * Buckets orders into one entry per local calendar day across [start, end).
  *
  * `orderCount` counts every order regardless of status (total demand
  * received); `revenue` only sums COMPLETED orders (money actually
  * fulfilled) — pending orders haven't been confirmed and cancelled ones
  * were never collected.
  */
-export function bucketOrdersByDay(
+function buildDailyBuckets(
   orders: { createdAt: Date | string; status: string; totalAmount: number }[],
-  days: number
+  start: Date,
+  end: Date
 ): DailyBucket[] {
-  const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
   const buckets = new Map<string, DailyBucket>();
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(startOfToday);
-    d.setDate(d.getDate() - i);
+  for (const d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
     const key = dateKeyOfDate(d);
-    buckets.set(key, { dateKey: key, label: WEEKDAYS[d.getDay()], orderCount: 0, revenue: 0 });
+    buckets.set(key, { dateKey: key, dayOfMonth: d.getDate(), orderCount: 0, revenue: 0 });
   }
 
   for (const order of orders) {
@@ -49,4 +40,27 @@ export function bucketOrdersByDay(
   }
 
   return Array.from(buckets.values());
+}
+
+/** Buckets orders into one entry per day of a given calendar month (1-12). */
+export function bucketOrdersByMonth(
+  orders: { createdAt: Date | string; status: string; totalAmount: number }[],
+  year: number,
+  month: number
+): DailyBucket[] {
+  return buildDailyBuckets(orders, new Date(year, month - 1, 1), new Date(year, month, 1));
+}
+
+/** Parses a "YYYY-MM" search param, falling back to the current month. */
+export function parseMonthParam(raw: string | undefined): { year: number; month: number } {
+  if (raw && /^\d{4}-\d{2}$/.test(raw)) {
+    const [year, month] = raw.split("-").map(Number);
+    if (month >= 1 && month <= 12) return { year, month };
+  }
+  const now = new Date();
+  return { year: now.getFullYear(), month: now.getMonth() + 1 };
+}
+
+export function monthParamOf(year: number, month: number): string {
+  return `${year}-${String(month).padStart(2, "0")}`;
 }

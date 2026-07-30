@@ -1,50 +1,68 @@
-import { ShoppingBag, DollarSign, TrendingUp, Trophy } from "lucide-react";
+import Link from "next/link";
+import { ShoppingBag, DollarSign, Receipt, Trophy, ChevronLeft, ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { bucketOrdersByDay } from "@/lib/analytics";
+import { bucketOrdersByMonth, parseMonthParam, monthParamOf } from "@/lib/analytics";
 import { Card } from "@/components/ui/Card";
+import { MonthlyBarChart } from "@/components/admin/dashboard/MonthlyBarChart";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage({
   params,
+  searchParams,
 }: {
-  params: Promise<{ tenantSlug: string; branchId: string }>;
+  params: Promise<{ branchId: string }>;
+  searchParams: Promise<{ month?: string }>;
 }) {
   const { branchId } = await params;
+  const { month: monthParam } = await searchParams;
 
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const sevenDaysAgoStart = new Date(startOfToday);
-  sevenDaysAgoStart.setDate(sevenDaysAgoStart.getDate() - 6);
-  const thirtyDaysAgoStart = new Date(startOfToday);
-  thirtyDaysAgoStart.setDate(thirtyDaysAgoStart.getDate() - 29);
+  const startOfTomorrow = new Date(startOfToday);
+  startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
 
-  const [weekOrders, completedLast30] = await Promise.all([
-    prisma.order.findMany({
-      where: { branchId, createdAt: { gte: sevenDaysAgoStart } },
-      select: { createdAt: true, status: true, totalAmount: true },
+  const { year, month } = parseMonthParam(monthParam);
+  const monthStart = new Date(year, month - 1, 1);
+  const monthEnd = new Date(year, month, 1);
+  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
+  const prevDate = new Date(year, month - 2, 1);
+  const nextDate = new Date(year, month, 1);
+  const prevHref = `?month=${monthParamOf(prevDate.getFullYear(), prevDate.getMonth() + 1)}`;
+  const nextHref = `?month=${monthParamOf(nextDate.getFullYear(), nextDate.getMonth() + 1)}`;
+  const monthLabel = monthStart.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
+  const [todayCount, todayRevenueAgg, monthOrders] = await Promise.all([
+    prisma.order.count({
+      where: { branchId, createdAt: { gte: startOfToday, lt: startOfTomorrow } },
+    }),
+    prisma.order.aggregate({
+      where: { branchId, status: "COMPLETED", createdAt: { gte: startOfToday, lt: startOfTomorrow } },
+      _sum: { totalAmount: true },
     }),
     prisma.order.findMany({
-      where: { branchId, status: "COMPLETED", createdAt: { gte: thirtyDaysAgoStart } },
-      select: { id: true },
+      where: { branchId, createdAt: { gte: monthStart, lt: monthEnd } },
+      select: { id: true, createdAt: true, status: true, totalAmount: true },
     }),
   ]);
 
-  const bestSellers = completedLast30.length
+  const completedMonthOrders = monthOrders.filter((o) => o.status === "COMPLETED");
+  const monthRevenue = completedMonthOrders.reduce((sum, o) => sum + o.totalAmount, 0);
+  const avgOrderValue = completedMonthOrders.length
+    ? Math.round(monthRevenue / completedMonthOrders.length)
+    : 0;
+
+  const bestSellers = completedMonthOrders.length
     ? await prisma.orderItem.groupBy({
         by: ["nameSnapshot"],
-        where: { orderId: { in: completedLast30.map((o) => o.id) } },
+        where: { orderId: { in: completedMonthOrders.map((o) => o.id) } },
         _sum: { quantity: true, subtotal: true },
         orderBy: { _sum: { quantity: "desc" } },
         take: 5,
       })
     : [];
 
-  const buckets = bucketOrdersByDay(weekOrders, 7);
-  const today = buckets[buckets.length - 1];
-  const weekCount = buckets.reduce((sum, b) => sum + b.orderCount, 0);
-  const weekRevenue = buckets.reduce((sum, b) => sum + b.revenue, 0);
-  const maxCount = Math.max(1, ...buckets.map((b) => b.orderCount));
+  const buckets = bucketOrdersByMonth(monthOrders, year, month);
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
@@ -52,39 +70,61 @@ export default async function DashboardPage({
         Dashboard
       </h1>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard icon={ShoppingBag} label="Today's Orders" value={String(today.orderCount)} />
-        <StatCard icon={DollarSign} label="Today's Revenue" value={`$${today.revenue}`} />
-        <StatCard icon={TrendingUp} label="This Week's Orders" value={String(weekCount)} />
-        <StatCard icon={DollarSign} label="This Week's Revenue" value={`$${weekRevenue}`} />
+      <div className="grid grid-cols-2 gap-4">
+        <StatCard icon={ShoppingBag} label="Today's Orders" value={String(todayCount)} />
+        <StatCard
+          icon={DollarSign}
+          label="Today's Revenue"
+          value={`$${todayRevenueAgg._sum.totalAmount ?? 0}`}
+        />
       </div>
 
       <Card className="p-5">
-        <h2 className="mb-4 font-[family-name:var(--font-display)] text-lg font-bold text-ink-900">
-          Last 7 Days
-        </h2>
-        <div className="flex h-32 items-end justify-between gap-2">
-          {buckets.map((b) => (
-            <div key={b.dateKey} className="flex flex-1 flex-col items-center gap-1.5">
-              <span className="text-xs font-medium text-ink-500">{b.orderCount}</span>
-              <div
-                className="w-full rounded-t-lg bg-brand-400"
-                style={{ height: `${Math.max(4, (b.orderCount / maxCount) * 96)}px` }}
-              />
-              <span className="text-xs text-ink-400">{b.label}</span>
-            </div>
-          ))}
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="font-[family-name:var(--font-display)] text-lg font-bold text-ink-900">
+            {monthLabel}
+          </h2>
+          <div className="flex items-center gap-1">
+            <Link
+              href={prevHref}
+              className="inline-flex size-8 items-center justify-center rounded-lg text-ink-500 transition-colors hover:bg-ink-100"
+              aria-label="Previous month"
+            >
+              <ChevronLeft className="size-4" />
+            </Link>
+            {isCurrentMonth ? (
+              <span className="inline-flex size-8 items-center justify-center rounded-lg text-ink-200">
+                <ChevronRight className="size-4" />
+              </span>
+            ) : (
+              <Link
+                href={nextHref}
+                className="inline-flex size-8 items-center justify-center rounded-lg text-ink-500 transition-colors hover:bg-ink-100"
+                aria-label="Next month"
+              >
+                <ChevronRight className="size-4" />
+              </Link>
+            )}
+          </div>
         </div>
+
+        <div className="mb-5 grid grid-cols-3 gap-3">
+          <MonthStat icon={ShoppingBag} label="Orders" value={String(monthOrders.length)} />
+          <MonthStat icon={DollarSign} label="Revenue" value={`$${monthRevenue}`} />
+          <MonthStat icon={Receipt} label="Avg. Order" value={`$${avgOrderValue}`} />
+        </div>
+
+        <MonthlyBarChart buckets={buckets} />
       </Card>
 
       <Card className="p-5">
         <h2 className="mb-4 flex items-center gap-2 font-[family-name:var(--font-display)] text-lg font-bold text-ink-900">
           <Trophy className="size-4 text-gold-600" />
           Best Sellers
-          <span className="text-sm font-normal text-ink-400">(last 30 days)</span>
+          <span className="text-sm font-normal text-ink-400">({monthLabel})</span>
         </h2>
         {bestSellers.length === 0 ? (
-          <p className="text-sm text-ink-400">No completed orders yet.</p>
+          <p className="text-sm text-ink-400">No completed orders this month.</p>
         ) : (
           <div className="flex flex-col gap-3">
             {bestSellers.map((item, i) => (
@@ -123,5 +163,25 @@ function StatCard({
       <p className="text-xl font-bold text-ink-900">{value}</p>
       <p className="text-xs text-ink-400">{label}</p>
     </Card>
+  );
+}
+
+function MonthStat({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof ShoppingBag;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex flex-col gap-1 rounded-xl bg-cream-50 px-3.5 py-3">
+      <div className="flex items-center gap-1.5 text-ink-400">
+        <Icon className="size-3.5" />
+        <span className="text-xs">{label}</span>
+      </div>
+      <p className="text-lg font-bold text-ink-900">{value}</p>
+    </div>
   );
 }
