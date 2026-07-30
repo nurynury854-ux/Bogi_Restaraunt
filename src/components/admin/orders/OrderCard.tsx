@@ -1,6 +1,7 @@
 "use client";
 
-import { User, Phone, MapPin, Clock, StickyNote, Wallet } from "lucide-react";
+import Link from "next/link";
+import { User, Phone, MapPin, Clock, StickyNote, Wallet, Printer } from "lucide-react";
 import type { SerializedOrder } from "@/lib/types";
 import {
   DINING_METHOD_LABEL,
@@ -49,7 +50,17 @@ export function OrderCard({
             )}
           </p>
         </div>
-        <p className="text-lg font-bold text-brand-600">${order.totalAmount}</p>
+        <div className="flex items-center gap-2">
+          <p className="text-lg font-bold text-brand-600">${order.totalAmount}</p>
+          <Link
+            href={`/print/orders/${order.id}`}
+            target="_blank"
+            aria-label={`Print ticket for order ${order.orderNo}`}
+            className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-ink-400 transition-colors hover:bg-ink-100 hover:text-brand-600"
+          >
+            <Printer className="size-4" />
+          </Link>
+        </div>
       </div>
 
       <div className="grid gap-1.5 text-sm text-ink-700 sm:grid-cols-2">

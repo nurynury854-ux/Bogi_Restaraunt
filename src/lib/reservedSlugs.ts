@@ -4,6 +4,7 @@
 export const RESERVED_SLUGS = new Set([
   "admin",
   "platform-admin",
+  "print",
   "api",
   "login",
   "logout",
