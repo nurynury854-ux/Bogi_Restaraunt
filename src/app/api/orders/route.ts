@@ -29,9 +29,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "This location isn't available" }, { status: 400 });
     }
 
+    const today = new Date();
+    const closure = await prisma.branchClosure.findUnique({
+      where: {
+        branchId_date: {
+          branchId: data.branchId,
+          date: new Date(today.getFullYear(), today.getMonth(), today.getDate()),
+        },
+      },
+    });
+    if (closure) {
+      return NextResponse.json(
+        { error: closure.reason ? `Closed today — ${closure.reason}` : "This location is closed today" },
+        { status: 400 }
+      );
+    }
+
     const menuItemIds = data.items.map((i) => i.menuItemId);
     const menuItems = await prisma.menuItem.findMany({
       where: { id: { in: menuItemIds }, tenantId },
+      include: { modifierGroups: { include: { options: true } } },
     });
     if (menuItems.length !== new Set(menuItemIds).size) {
       return NextResponse.json(
@@ -45,6 +62,41 @@ export async function POST(request: NextRequest) {
         { error: `"${unavailable.name}" is no longer available — please remove it from your cart` },
         { status: 400 }
       );
+    }
+
+    for (const orderItem of data.items) {
+      const menuItem = menuItems.find((m) => m.id === orderItem.menuItemId)!;
+      const selectedIds = new Set(orderItem.modifierOptionIds ?? []);
+      const allOptionIds = new Set(menuItem.modifierGroups.flatMap((g) => g.options.map((o) => o.id)));
+      for (const id of selectedIds) {
+        if (!allOptionIds.has(id)) {
+          return NextResponse.json(
+            {
+              error: `An option for "${menuItem.name}" is no longer available — please check your cart`,
+            },
+            { status: 400 }
+          );
+        }
+      }
+      for (const group of menuItem.modifierGroups) {
+        const chosen = group.options.filter((o) => selectedIds.has(o.id));
+        const unavailableChoice = chosen.find((o) => !o.isAvailable);
+        if (unavailableChoice) {
+          return NextResponse.json(
+            {
+              error: `"${unavailableChoice.name}" is no longer available — please update "${menuItem.name}"`,
+            },
+            { status: 400 }
+          );
+        }
+        const max = group.maxSelect ?? Infinity;
+        if (chosen.length < group.minSelect || chosen.length > max) {
+          return NextResponse.json(
+            { error: `Please pick a valid "${group.name}" selection for "${menuItem.name}"` },
+            { status: 400 }
+          );
+        }
+      }
     }
 
     if (data.timeSlotId) {
@@ -66,12 +118,27 @@ export async function POST(request: NextRequest) {
 
     const itemsWithPrice = data.items.map((orderItem) => {
       const menuItem = menuItems.find((m) => m.id === orderItem.menuItemId)!;
+      const selectedIds = new Set(orderItem.modifierOptionIds ?? []);
+      const chosenOptions = menuItem.modifierGroups.flatMap((g) =>
+        g.options
+          .filter((o) => selectedIds.has(o.id))
+          .map((o) => ({ option: o, groupName: g.name }))
+      );
+      const unitPrice = menuItem.price + chosenOptions.reduce((sum, c) => sum + c.option.priceDelta, 0);
       return {
         menuItemId: menuItem.id,
         nameSnapshot: menuItem.name,
-        priceSnapshot: menuItem.price,
+        priceSnapshot: unitPrice,
         quantity: orderItem.quantity,
-        subtotal: menuItem.price * orderItem.quantity,
+        subtotal: unitPrice * orderItem.quantity,
+        modifiers: {
+          create: chosenOptions.map((c) => ({
+            modifierOptionId: c.option.id,
+            groupNameSnapshot: c.groupName,
+            nameSnapshot: c.option.name,
+            priceDeltaSnapshot: c.option.priceDelta,
+          })),
+        },
       };
     });
     const totalAmount = itemsWithPrice.reduce((sum, i) => sum + i.subtotal, 0);
@@ -93,7 +160,7 @@ export async function POST(request: NextRequest) {
         totalAmount,
         items: { create: itemsWithPrice },
       },
-      include: { items: true, branch: true, timeSlot: true },
+      include: { items: { include: { modifiers: true } }, branch: true, timeSlot: true },
     });
 
     return NextResponse.json({ order }, { status: 201 });
@@ -151,7 +218,7 @@ export async function GET(request: NextRequest) {
       const [orders, total] = await Promise.all([
         prisma.order.findMany({
           where,
-          include: { items: true, branch: true, timeSlot: true },
+          include: { items: { include: { modifiers: true } }, branch: true, timeSlot: true },
           orderBy: { createdAt: "desc" },
           skip: (pageNum - 1) * HISTORY_PAGE_SIZE,
           take: HISTORY_PAGE_SIZE,
@@ -163,7 +230,7 @@ export async function GET(request: NextRequest) {
 
     const orders = await prisma.order.findMany({
       where,
-      include: { items: true, branch: true, timeSlot: true },
+      include: { items: { include: { modifiers: true } }, branch: true, timeSlot: true },
       orderBy: { createdAt: "desc" },
       take: 300,
     });

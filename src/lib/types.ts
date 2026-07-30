@@ -7,12 +7,20 @@ export interface SerializedTenant {
   isActive: boolean;
 }
 
+export interface SerializedOrderItemModifier {
+  id: string;
+  groupNameSnapshot: string;
+  nameSnapshot: string;
+  priceDeltaSnapshot: number;
+}
+
 export interface SerializedOrderItem {
   id: string;
   nameSnapshot: string;
   priceSnapshot: number;
   quantity: number;
   subtotal: number;
+  modifiers: SerializedOrderItemModifier[];
 }
 
 export interface SerializedBranch {
@@ -25,6 +33,13 @@ export interface SerializedBranch {
   isActive: boolean;
 }
 
+export interface SerializedBranchClosure {
+  id: string;
+  branchId: string;
+  date: string;
+  reason: string | null;
+}
+
 export interface SerializedTimeSlot {
   id: string;
   branchId: string;
@@ -32,6 +47,25 @@ export interface SerializedTimeSlot {
   method: string;
   isActive: boolean;
   sortOrder: number;
+}
+
+export interface SerializedModifierOption {
+  id: string;
+  modifierGroupId: string;
+  name: string;
+  priceDelta: number;
+  isAvailable: boolean;
+  sortOrder: number;
+}
+
+export interface SerializedModifierGroup {
+  id: string;
+  menuItemId: string;
+  name: string;
+  minSelect: number;
+  maxSelect: number | null;
+  sortOrder: number;
+  options: SerializedModifierOption[];
 }
 
 export interface SerializedMenuItem {
@@ -43,6 +77,7 @@ export interface SerializedMenuItem {
   imageUrl: string | null;
   isAvailable: boolean;
   sortOrder: number;
+  modifierGroups: SerializedModifierGroup[];
 }
 
 export interface SerializedMenuCategory {

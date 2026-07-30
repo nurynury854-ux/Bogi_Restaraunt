@@ -29,7 +29,7 @@ export default async function PrintOrderPage({
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    include: { items: true, branch: true, timeSlot: true, tenant: true },
+    include: { items: { include: { modifiers: true } }, branch: true, timeSlot: true, tenant: true },
   });
 
   // Same NotFoundError-not-Forbidden philosophy as the rest of the admin
@@ -69,9 +69,16 @@ export default async function PrintOrderPage({
 
         <div className="flex flex-col gap-2">
           {order.items.map((item) => (
-            <p key={item.id} className="text-base font-semibold">
-              {item.quantity}x {item.nameSnapshot}
-            </p>
+            <div key={item.id}>
+              <p className="text-base font-semibold">
+                {item.quantity}x {item.nameSnapshot}
+              </p>
+              {item.modifiers.map((m) => (
+                <p key={m.id} className="pl-4 text-sm">
+                  – {m.nameSnapshot}
+                </p>
+              ))}
+            </div>
           ))}
         </div>
 

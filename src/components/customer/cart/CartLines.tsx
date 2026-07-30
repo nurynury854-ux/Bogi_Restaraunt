@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useOrderStore, type CartItem } from "@/lib/store/orderStore";
+import { useOrderStore, cartLineUnitPrice, type CartItem } from "@/lib/store/orderStore";
 import { QuantityStepper } from "@/components/ui/QuantityStepper";
 
 export function CartLines({ items }: { items: CartItem[] }) {
@@ -18,7 +18,12 @@ export function CartLines({ items }: { items: CartItem[] }) {
         <li key={item.id} className="flex items-center justify-between gap-3">
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-ink-900">{item.name}</p>
-            <p className="text-xs text-ink-500">${item.price} each</p>
+            {item.modifiers.length > 0 && (
+              <p className="truncate text-xs text-ink-500">
+                {item.modifiers.map((m) => m.name).join(", ")}
+              </p>
+            )}
+            <p className="text-xs text-ink-500">${cartLineUnitPrice(item)} each</p>
           </div>
           <QuantityStepper
             size="sm"

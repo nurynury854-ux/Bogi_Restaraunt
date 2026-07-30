@@ -96,8 +96,19 @@ export function OrderCard({
         </div>
       </div>
 
-      <div className="rounded-xl bg-cream-50 px-3.5 py-2.5 text-sm text-ink-700">
-        {order.items.map((i) => `${i.nameSnapshot} x${i.quantity}`).join(", ")}
+      <div className="flex flex-col gap-1.5 rounded-xl bg-cream-50 px-3.5 py-2.5 text-sm text-ink-700">
+        {order.items.map((i) => (
+          <div key={i.id}>
+            <span>
+              {i.nameSnapshot} x{i.quantity}
+            </span>
+            {i.modifiers.length > 0 && (
+              <span className="block text-xs text-ink-500">
+                {i.modifiers.map((m) => m.nameSnapshot).join(", ")}
+              </span>
+            )}
+          </div>
+        ))}
       </div>
 
       {order.notes && (

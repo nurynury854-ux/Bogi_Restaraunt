@@ -10,7 +10,13 @@ export async function GET() {
     const items = await prisma.menuItem.findMany({
       where: { tenantId: session.tenantId },
       orderBy: [{ categoryId: "asc" }, { sortOrder: "asc" }],
-      include: { category: true },
+      include: {
+        category: true,
+        modifierGroups: {
+          orderBy: { sortOrder: "asc" },
+          include: { options: { orderBy: { sortOrder: "asc" } } },
+        },
+      },
     });
     return NextResponse.json({ items });
   } catch (error) {

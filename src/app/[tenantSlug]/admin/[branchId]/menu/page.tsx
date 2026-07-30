@@ -15,7 +15,17 @@ export default async function BranchMenuPage({
   const categories = await prisma.menuCategory.findMany({
     where: { tenantId: tenant.id },
     orderBy: { sortOrder: "asc" },
-    include: { items: { orderBy: { sortOrder: "asc" } } },
+    include: {
+      items: {
+        orderBy: { sortOrder: "asc" },
+        include: {
+          modifierGroups: {
+            orderBy: { sortOrder: "asc" },
+            include: { options: { orderBy: { sortOrder: "asc" } } },
+          },
+        },
+      },
+    },
   });
 
   return (

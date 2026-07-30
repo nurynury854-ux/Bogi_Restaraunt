@@ -12,9 +12,11 @@ import { CartLines } from "@/components/customer/cart/CartLines";
 export function CartWidget({
   variant,
   tenantSlug,
+  disabled,
 }: {
   variant: "sidebar" | "mobile";
   tenantSlug: string;
+  disabled?: boolean;
 }) {
   const cart = useOrderStore((s) => s.cart);
   const router = useRouter();
@@ -23,6 +25,7 @@ export function CartWidget({
   const [expanded, setExpanded] = useState(false);
 
   function goCheckout() {
+    if (disabled) return;
     setExpanded(false);
     router.push(`/${tenantSlug}/checkout/details`);
   }
@@ -43,8 +46,8 @@ export function CartWidget({
                 <span className="text-brand-600">${total}</span>
               </div>
             </div>
-            <Button fullWidth size="lg" onClick={goCheckout}>
-              Checkout ({count} item{count === 1 ? "" : "s"})
+            <Button fullWidth size="lg" disabled={disabled} onClick={goCheckout}>
+              {disabled ? "Location Closed" : `Checkout (${count} item${count === 1 ? "" : "s"})`}
             </Button>
           </>
         )}
@@ -110,8 +113,8 @@ export function CartWidget({
                     <span>Total</span>
                     <span className="text-brand-600">${total}</span>
                   </div>
-                  <Button fullWidth size="lg" onClick={goCheckout}>
-                    Checkout
+                  <Button fullWidth size="lg" disabled={disabled} onClick={goCheckout}>
+                    {disabled ? "Location Closed" : "Checkout"}
                   </Button>
                 </div>
               )}

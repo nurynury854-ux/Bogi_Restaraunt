@@ -2,15 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
-import type { MenuCategory, MenuItem } from "@/generated/prisma/client";
+import { ChevronLeft, CalendarOff } from "lucide-react";
+import type { MenuCategory } from "@/generated/prisma/client";
 import { useOrderStore } from "@/lib/store/orderStore";
 import { DINING_METHOD_LABEL } from "@/lib/constants";
 import { usePolling } from "@/lib/hooks/usePolling";
-import { MenuItemRow } from "@/components/customer/MenuItemRow";
+import { MenuItemRow, type MenuItemWithModifiers } from "@/components/customer/MenuItemRow";
 import { CartWidget } from "@/components/customer/cart/CartWidget";
 
-type CategoryWithItems = MenuCategory & { items: MenuItem[] };
+type CategoryWithItems = MenuCategory & { items: MenuItemWithModifiers[] };
 
 const MENU_POLL_INTERVAL_MS = 8000;
 
@@ -24,21 +24,37 @@ export function MenuBrowser({
   const router = useRouter();
   const branchName = useOrderStore((s) => s.branchName);
   const diningMethod = useOrderStore((s) => s.diningMethod);
+  const branchId = useOrderStore((s) => s.branchId);
 
   const [categories, setCategories] = useState(initialCategories);
   const [ready, setReady] = useState(false);
   const [activeCategory, setActiveCategory] = useState(initialCategories[0]?.id ?? "");
+  const [closedToday, setClosedToday] = useState(false);
+  const [closedReason, setClosedReason] = useState<string | null>(null);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
-  // Menu availability toggles from the admin backend show up here automatically:
-  // re-read the public menu every few seconds so an item taken offline (or put
-  // back) reflects without the customer refreshing.
-  usePolling(() => {
-    fetch(`/api/menu/public?tenant=${tenantSlug}`)
+  function refreshMenu() {
+    if (!branchId) return;
+    fetch(`/api/menu/public?tenant=${tenantSlug}&branchId=${branchId}`)
       .then((res) => res.json())
-      .then((data: { categories: CategoryWithItems[] }) => setCategories(data.categories))
+      .then(
+        (data: {
+          categories: CategoryWithItems[];
+          closedToday: boolean;
+          closedReason: string | null;
+        }) => {
+          setCategories(data.categories);
+          setClosedToday(data.closedToday);
+          setClosedReason(data.closedReason);
+        }
+      )
       .catch(() => null);
-  }, MENU_POLL_INTERVAL_MS);
+  }
+
+  // Menu availability toggles (and closed-today status) from the admin
+  // backend show up here automatically: re-read the public menu every few
+  // seconds so a change reflects without the customer refreshing.
+  usePolling(refreshMenu, MENU_POLL_INTERVAL_MS);
 
   useEffect(() => {
     // See useCheckoutGuard for why rehydration is triggered manually here
@@ -49,8 +65,15 @@ export function MenuBrowser({
       router.replace(`/${tenantSlug}`);
       return;
     }
-    setReady(true);
+    // Deferred so the setState isn't synchronous within the effect body.
+    const id = setTimeout(() => setReady(true), 0);
+    return () => clearTimeout(id);
   }, [router, tenantSlug]);
+
+  useEffect(() => {
+    if (ready) refreshMenu();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready]);
 
   useEffect(() => {
     if (!ready) return;
@@ -107,6 +130,13 @@ export function MenuBrowser({
           <div className="w-16" />
         </div>
       </header>
+
+      {closedToday && (
+        <div className="flex items-center justify-center gap-2 bg-danger-500/10 px-4 py-2.5 text-center text-sm font-medium text-danger-600">
+          <CalendarOff className="size-4 shrink-0" />
+          {closedReason ? `Closed today — ${closedReason}` : "This location is closed today"}
+        </div>
+      )}
 
       {/* Mobile category rail — full-width horizontal scroller, phones only.
           Kept OUTSIDE the flex row below so it lays out as a top bar rather
@@ -174,13 +204,13 @@ export function MenuBrowser({
 
         {/* Desktop cart sidebar */}
         <aside className="sticky top-[76px] hidden h-fit w-80 shrink-0 lg:block">
-          <CartWidget variant="sidebar" tenantSlug={tenantSlug} />
+          <CartWidget variant="sidebar" tenantSlug={tenantSlug} disabled={closedToday} />
         </aside>
       </div>
 
       {/* Mobile floating cart */}
       <div className="lg:hidden">
-        <CartWidget variant="mobile" tenantSlug={tenantSlug} />
+        <CartWidget variant="mobile" tenantSlug={tenantSlug} disabled={closedToday} />
       </div>
     </div>
   );

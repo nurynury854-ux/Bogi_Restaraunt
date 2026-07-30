@@ -12,7 +12,7 @@ export default async function CompletedOrdersPage({
   const { branchId } = await params;
   const orders = await prisma.order.findMany({
     where: { branchId, status: { in: COMPLETED_STATUSES } },
-    include: { items: true, branch: true, timeSlot: true },
+    include: { items: { include: { modifiers: true } }, branch: true, timeSlot: true },
     orderBy: { createdAt: "desc" },
     take: 300,
   });

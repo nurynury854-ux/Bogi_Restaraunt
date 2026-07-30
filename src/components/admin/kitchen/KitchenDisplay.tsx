@@ -140,9 +140,16 @@ function KitchenTicket({
 
       <div className="flex flex-col gap-1.5">
         {order.items.map((item) => (
-          <p key={item.id} className="text-lg font-semibold leading-tight">
-            <span className="text-brand-400">{item.quantity}x</span> {item.nameSnapshot}
-          </p>
+          <div key={item.id}>
+            <p className="text-lg font-semibold leading-tight">
+              <span className="text-brand-400">{item.quantity}x</span> {item.nameSnapshot}
+            </p>
+            {item.modifiers.length > 0 && (
+              <p className="pl-5 text-sm text-white/60">
+                {item.modifiers.map((m) => m.nameSnapshot).join(", ")}
+              </p>
+            )}
+          </div>
         ))}
       </div>
 

@@ -4,11 +4,20 @@ import { create } from "zustand";
 import { persist, createJSONStorage, type StateStorage } from "zustand/middleware";
 import type { DiningMethod, PaymentMethod } from "@/lib/constants";
 
-export interface CartItem {
-  id: string;
+export interface SelectedModifier {
+  optionId: string;
+  groupName: string;
   name: string;
-  price: number;
+  priceDelta: number;
+}
+
+export interface CartItem {
+  id: string; // unique cart line id — see lineIdFor()
+  menuItemId: string;
+  name: string;
+  price: number; // base item price, before modifiers
   quantity: number;
+  modifiers: SelectedModifier[];
 }
 
 export interface CustomerDetails {
@@ -51,7 +60,13 @@ interface OrderState {
     branchName: string,
     diningMethod: DiningMethod
   ) => void;
-  addItem: (item: { id: string; name: string; price: number }) => void;
+  addItem: (item: {
+    menuItemId: string;
+    name: string;
+    price: number;
+    quantity: number;
+    modifiers: SelectedModifier[];
+  }) => void;
   setItemQuantity: (id: string, quantity: number) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
@@ -71,6 +86,20 @@ const sessionStorageWrapper: StateStorage = {
     if (typeof window !== "undefined") window.sessionStorage.removeItem(name);
   },
 };
+
+// Two lines are the "same line" (mergeable, quantity adds up) only if they're
+// the same menu item with the exact same modifier selections. A plain item
+// with no modifiers keeps its line id equal to the menu item id — the same
+// identity scheme used before modifiers existed, so existing single-variant
+// items behave exactly as before.
+function lineIdFor(menuItemId: string, modifiers: SelectedModifier[]): string {
+  if (modifiers.length === 0) return menuItemId;
+  const key = [...modifiers]
+    .map((m) => m.optionId)
+    .sort()
+    .join(",");
+  return `${menuItemId}::${key}`;
+}
 
 export const useOrderStore = create<OrderState>()(
   persist(
@@ -100,15 +129,28 @@ export const useOrderStore = create<OrderState>()(
 
       addItem: (item) =>
         set((state) => {
-          const existing = state.cart.find((c) => c.id === item.id);
+          const lineId = lineIdFor(item.menuItemId, item.modifiers);
+          const existing = state.cart.find((c) => c.id === lineId);
           if (existing) {
             return {
               cart: state.cart.map((c) =>
-                c.id === item.id ? { ...c, quantity: c.quantity + 1 } : c
+                c.id === lineId ? { ...c, quantity: c.quantity + item.quantity } : c
               ),
             };
           }
-          return { cart: [...state.cart, { ...item, quantity: 1 }] };
+          return {
+            cart: [
+              ...state.cart,
+              {
+                id: lineId,
+                menuItemId: item.menuItemId,
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity,
+                modifiers: item.modifiers,
+              },
+            ],
+          };
         }),
 
       setItemQuantity: (id, quantity) =>
@@ -159,8 +201,12 @@ export const useOrderStore = create<OrderState>()(
   )
 );
 
+export function cartLineUnitPrice(item: CartItem): number {
+  return item.price + item.modifiers.reduce((sum, m) => sum + m.priceDelta, 0);
+}
+
 export function cartTotal(cart: CartItem[]): number {
-  return cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  return cart.reduce((sum, item) => sum + cartLineUnitPrice(item) * item.quantity, 0);
 }
 
 export function cartCount(cart: CartItem[]): number {

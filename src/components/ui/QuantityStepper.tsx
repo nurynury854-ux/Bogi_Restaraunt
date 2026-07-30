@@ -20,7 +20,7 @@ export function QuantityStepper({
         whileTap={{ scale: 0.88 }}
         onClick={() => onChange(quantity - 1)}
         className={`flex ${dims} items-center justify-center rounded-full border border-ink-100 bg-white text-ink-700 transition-colors hover:border-brand-300 hover:text-brand-600 cursor-pointer`}
-        aria-label="減少數量"
+        aria-label="Decrease quantity"
       >
         <Minus className="size-3.5" />
       </motion.button>
@@ -32,7 +32,7 @@ export function QuantityStepper({
         whileTap={{ scale: 0.88 }}
         onClick={() => onChange(quantity + 1)}
         className={`flex ${dims} items-center justify-center rounded-full bg-brand-500 text-white transition-colors hover:bg-brand-600 cursor-pointer`}
-        aria-label="增加數量"
+        aria-label="Increase quantity"
       >
         <Plus className="size-3.5" />
       </motion.button>

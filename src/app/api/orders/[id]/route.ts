@@ -13,7 +13,7 @@ export async function GET(
     const { id } = await params;
     const order = await prisma.order.findUnique({
       where: { id },
-      include: { items: true, branch: true, timeSlot: true },
+      include: { items: { include: { modifiers: true } }, branch: true, timeSlot: true },
     });
     assertTenantOwns(order, session.tenantId);
     return NextResponse.json({ order });
@@ -37,7 +37,7 @@ export async function PATCH(
     const order = await prisma.order.update({
       where: { id },
       data: { status: data.status },
-      include: { items: true, branch: true, timeSlot: true },
+      include: { items: { include: { modifiers: true } }, branch: true, timeSlot: true },
     });
     return NextResponse.json({ order });
   } catch (error) {

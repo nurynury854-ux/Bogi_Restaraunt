@@ -25,12 +25,15 @@ model Tenant {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  adminUsers   AdminUser[]
-  branches     Branch[]
-  categories   MenuCategory[]
-  items        MenuItem[]
-  timeSlots    TimeSlot[]
-  orders       Order[]
+  adminUsers      AdminUser[]
+  branches        Branch[]
+  categories      MenuCategory[]
+  items           MenuItem[]
+  timeSlots       TimeSlot[]
+  orders          Order[]
+  modifierGroups  ModifierGroup[]
+  modifierOptions ModifierOption[]
+  branchClosures  BranchClosure[]
 }
 
 model AdminUser {
@@ -56,6 +59,7 @@ model Branch {
 
   timeSlots TimeSlot[]
   orders    Order[]
+  closures  BranchClosure[]
 
   @@unique([tenantId, name])
 }
@@ -89,7 +93,63 @@ model MenuItem {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
-  orderItems  OrderItem[]
+  orderItems     OrderItem[]
+  modifierGroups ModifierGroup[]
+}
+
+/// A named set of choices attached to one menu item (e.g. "Size", "Spice
+/// Level", "Add-ons") — not shared across items, so a business re-creates a
+/// similar group per item rather than picking from a reusable library. Keeps
+/// both the data model and the admin UI simple; worth revisiting only if
+/// duplication across many items becomes a real complaint.
+///
+/// minSelect/maxSelect generalize "pick exactly one" (1/1), "pick one or
+/// skip" (0/1), and "pick up to N" (0/N) without a separate required flag or
+/// a single-vs-multiple enum.
+model ModifierGroup {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  menuItemId String
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  name       String
+  minSelect  Int      @default(0)
+  maxSelect  Int?
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  options ModifierOption[]
+}
+
+model ModifierOption {
+  id              String        @id @default(cuid())
+  tenantId        String
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  modifierGroupId String
+  modifierGroup   ModifierGroup @relation(fields: [modifierGroupId], references: [id], onDelete: Cascade)
+  name            String
+  priceDelta      Int           @default(0)
+  isAvailable     Boolean       @default(true)
+  sortOrder       Int           @default(0)
+
+  orderItemModifiers OrderItemModifier[]
+}
+
+/// A restaurant closing for a specific calendar date (holiday, one-off
+/// closure) without touching its recurring weekly time-slot list.
+model BranchClosure {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branchId  String
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  date      DateTime
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@unique([branchId, date])
+  @@index([tenantId, branchId])
 }
 
 /// method: "PICKUP" | "DELIVERY"
@@ -151,4 +211,20 @@ model OrderItem {
   priceSnapshot Int
   quantity      Int
   subtotal      Int
+
+  modifiers OrderItemModifier[]
+}
+
+/// A snapshot of one selected modifier option at order time — preserved even
+/// if the option is later edited/deleted, same rationale as
+/// OrderItem.nameSnapshot/priceSnapshot for the base item.
+model OrderItemModifier {
+  id                 String          @id @default(cuid())
+  orderItemId        String
+  orderItem          OrderItem       @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  modifierOptionId   String?
+  modifierOption     ModifierOption? @relation(fields: [modifierOptionId], references: [id], onDelete: SetNull)
+  groupNameSnapshot  String
+  nameSnapshot       String
+  priceDeltaSnapshot Int
 }

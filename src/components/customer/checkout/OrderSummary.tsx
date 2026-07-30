@@ -1,6 +1,6 @@
 "use client";
 
-import { useOrderStore, cartTotal } from "@/lib/store/orderStore";
+import { useOrderStore, cartTotal, cartLineUnitPrice } from "@/lib/store/orderStore";
 import { Card } from "@/components/ui/Card";
 import { DINING_METHOD_LABEL } from "@/lib/constants";
 
@@ -25,8 +25,15 @@ export function OrderSummary() {
             <span className="text-ink-700">
               {item.name}{" "}
               <span className="text-ink-400">x{item.quantity}</span>
+              {item.modifiers.length > 0 && (
+                <span className="block text-xs text-ink-400">
+                  {item.modifiers.map((m) => m.name).join(", ")}
+                </span>
+              )}
             </span>
-            <span className="font-medium text-ink-900">${item.price * item.quantity}</span>
+            <span className="font-medium text-ink-900">
+              ${cartLineUnitPrice(item) * item.quantity}
+            </span>
           </li>
         ))}
       </ul>

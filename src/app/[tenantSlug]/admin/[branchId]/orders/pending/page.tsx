@@ -14,7 +14,7 @@ export default async function PendingOrdersPage({
   const { tenantSlug, branchId } = await params;
   const orders = await prisma.order.findMany({
     where: { branchId, status: { in: PENDING_STATUSES } },
-    include: { items: true, branch: true, timeSlot: true },
+    include: { items: { include: { modifiers: true } }, branch: true, timeSlot: true },
     orderBy: { createdAt: "asc" },
   });
 

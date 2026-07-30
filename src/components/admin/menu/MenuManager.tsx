@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, X, Check, Upload, UtensilsCrossed } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Check, Upload, UtensilsCrossed, ListPlus } from "lucide-react";
 import type { SerializedMenuCategory, SerializedMenuItem } from "@/lib/types";
 import { usePolling } from "@/lib/hooks/usePolling";
 import { Card } from "@/components/ui/Card";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { Input, Textarea, FieldWrapper } from "@/components/ui/Field";
 import { Badge } from "@/components/ui/Badge";
 import { ToggleSwitch } from "@/components/ui/ToggleSwitch";
+import { ModifierGroupsEditor } from "@/components/admin/menu/ModifierGroupsEditor";
 
 interface EditingItem {
   id: string;
@@ -49,10 +50,12 @@ export function MenuManager({
   const [busy, setBusy] = useState(false);
   const [uploadingNew, setUploadingNew] = useState(false);
   const [uploadingEdit, setUploadingEdit] = useState(false);
+  const [expandedModifiersId, setExpandedModifiersId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const busyRef = useRef(false);
   useEffect(() => {
-    busyRef.current = busy || uploadingNew || uploadingEdit || !!editingItem || addingCategory;
+    busyRef.current =
+      busy || uploadingNew || uploadingEdit || !!editingItem || addingCategory || !!expandedModifiersId;
   });
 
   function refresh() {
@@ -435,6 +438,22 @@ export function MenuManager({
                         onChange={() => toggleAvailable(item)}
                       />
                       <button
+                        onClick={() =>
+                          setExpandedModifiersId(expandedModifiersId === item.id ? null : item.id)
+                        }
+                        className={`relative flex size-8 cursor-pointer items-center justify-center rounded-lg hover:bg-ink-100 ${
+                          expandedModifiersId === item.id ? "bg-ink-100 text-brand-600" : "text-ink-500"
+                        }`}
+                        aria-label="Manage options (size, add-ons, etc.)"
+                      >
+                        <ListPlus className="size-3.5" />
+                        {item.modifierGroups.length > 0 && (
+                          <span className="absolute -right-1 -top-1 flex size-3.5 items-center justify-center rounded-full bg-brand-500 text-[9px] font-semibold text-white">
+                            {item.modifierGroups.length}
+                          </span>
+                        )}
+                      </button>
+                      <button
                         onClick={() => startEdit(item)}
                         className="flex size-8 cursor-pointer items-center justify-center rounded-lg text-ink-500 hover:bg-ink-100"
                       >
@@ -448,6 +467,9 @@ export function MenuManager({
                       </button>
                     </div>
                   </div>
+                )}
+                {expandedModifiersId === item.id && editingItem?.id !== item.id && (
+                  <ModifierGroupsEditor item={item} onChange={refresh} />
                 )}
               </li>
             ))}

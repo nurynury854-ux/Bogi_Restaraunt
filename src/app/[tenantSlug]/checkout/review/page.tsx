@@ -45,7 +45,11 @@ export default function CheckoutReviewPage() {
           tenantSlug,
           branchId,
           diningMethod,
-          items: cart.map((c) => ({ menuItemId: c.id, quantity: c.quantity })),
+          items: cart.map((c) => ({
+            menuItemId: c.menuItemId,
+            quantity: c.quantity,
+            modifierOptionIds: c.modifiers.map((m) => m.optionId),
+          })),
           tableNumber: customer.tableNumber || undefined,
           timeSlotId: customer.timeSlotId || undefined,
           customerName: customer.name,

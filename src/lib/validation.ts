@@ -16,6 +16,7 @@ const phoneSchema = z
 export const orderItemSchema = z.object({
   menuItemId: z.string().min(1),
   quantity: z.number().int().min(1).max(99),
+  modifierOptionIds: z.array(z.string().min(1)).max(50).optional(),
 });
 
 export const createOrderSchema = z
@@ -119,6 +120,52 @@ export const menuItemUpdateSchema = z.object({
   imageUrl: z.string().trim().url().max(600).nullable().optional(),
   isAvailable: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
+});
+
+export const modifierGroupCreateSchema = z
+  .object({
+    name: z.string().trim().min(1, "Please enter a group name").max(40),
+    minSelect: z.number().int().min(0).max(50).optional(),
+    maxSelect: z.number().int().min(0).max(50).nullable().optional(),
+    sortOrder: z.number().int().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (
+      typeof data.minSelect === "number" &&
+      typeof data.maxSelect === "number" &&
+      data.maxSelect > 0 &&
+      data.minSelect > data.maxSelect
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["minSelect"],
+        message: "Minimum can't be greater than maximum",
+      });
+    }
+  });
+
+export const modifierGroupUpdateSchema = z.object({
+  name: z.string().trim().min(1).max(40).optional(),
+  minSelect: z.number().int().min(0).max(50).optional(),
+  maxSelect: z.number().int().min(0).max(50).nullable().optional(),
+  sortOrder: z.number().int().optional(),
+});
+
+export const modifierOptionCreateSchema = z.object({
+  name: z.string().trim().min(1, "Please enter an option name").max(40),
+  priceDelta: z.number().int().min(-1000000).max(1000000).optional(),
+  isAvailable: z.boolean().optional(),
+  sortOrder: z.number().int().optional(),
+});
+
+export const modifierOptionUpdateSchema = modifierOptionCreateSchema.partial();
+
+export const branchClosureCreateSchema = z.object({
+  date: z
+    .string()
+    .trim()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Please pick a date"),
+  reason: z.string().trim().max(120).optional(),
 });
 
 export const timeSlotCreateSchema = z.object({

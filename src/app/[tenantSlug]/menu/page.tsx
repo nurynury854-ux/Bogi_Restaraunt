@@ -19,6 +19,14 @@ export default async function MenuPage({
       items: {
         where: { isAvailable: true },
         orderBy: { sortOrder: "asc" },
+        include: {
+          modifierGroups: {
+            orderBy: { sortOrder: "asc" },
+            include: {
+              options: { where: { isAvailable: true }, orderBy: { sortOrder: "asc" } },
+            },
+          },
+        },
       },
     },
   });

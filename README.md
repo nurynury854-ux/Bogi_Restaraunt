@@ -67,11 +67,14 @@ A reserved-word list (`admin`, `login`, `signup`, `api`, etc.) prevents a tenant
 This is the part that matters most in a multi-tenant app. Every admin session is signed with the tenant it belongs to; visiting another tenant's `/admin` URL redirects to login rather than leaking anything. Every API route re-derives the tenant from the authenticated session (never trusts a tenant id from the request) and filters every query by it, and every "fetch by id" admin action (edit a branch, update a menu item, etc.) explicitly checks the fetched record's `tenantId` before allowing the read/write — so even guessing another tenant's internal ID doesn't work. This was verified directly (created two tenants, confirmed one's session/API calls cannot see or modify the other's branches, menu, or orders).
 
 ### Admin panel (per tenant)
-- **Pending Orders** and **Completed Orders** are separate pages (never shown together), each split into Dine-in/Pickup/Delivery tabs and grouped by date — Pending oldest-first (handle the longest-waiting order first), Completed newest-first. Each order card shows everything: order number, customer name/phone, items, total, payment method, table/time-slot/address as applicable, notes.
+- **Dashboard**: today's orders/revenue, a monthly overview with a `‹ month ›` picker (orders, revenue, average order value, a daily revenue chart), and that month's best sellers.
+- **Pending Orders** and **Completed Orders** are separate pages (never shown together), each split into Dine-in/Pickup/Delivery tabs and grouped by date — Pending oldest-first (handle the longest-waiting order first), Completed newest-first. Each order card shows everything: order number, customer name/phone, items (with any selected options), total, payment method, table/time-slot/address as applicable, notes — plus a print button for a receipt-width kitchen ticket.
+- **Order History**: search/filter all of a branch's orders by order number, phone, date range, status, or dining method, paginated.
 - One **Mark Complete** button per pending order (plus a secondary Cancel for mistaken orders). Moves it to Completed — reflected on any other open admin tab/device within a few seconds.
+- **Kitchen Display**: a full-screen, large-text view of pending orders for a monitor/tablet in the kitchen, with an elapsed-time badge that escalates past 10/20 minutes.
 - **New order alert**: an on-screen banner + beep while an admin has any page of their panel open.
-- **Menu Management**: full add/edit/delete for categories and items, including photo upload per item, plus an availability toggle. Shared across all of a tenant's locations.
-- **Locations**: add/edit locations (name, address, phone, hours), each with its own time slots; disable a location to hide it from ordering.
+- **Menu Management**: full add/edit/delete for categories and items, including photo upload per item, an availability toggle, and per-item **option groups** (size, spice level, add-ons — each with its own min/max selection rule and a price delta per choice). Shared across all of a tenant's locations.
+- **Locations**: add/edit locations (name, address, phone, hours), each with its own time slots; disable a location to hide it from ordering. Each location also has its own **closed-date list** (holidays, one-off closures) that blocks ordering for that date without touching the regular time slots.
 - **Site Settings**: business name, logo upload, and a brand accent color that actually re-themes that tenant's customer-facing site.
 
 ### Platform-admin dashboard (you, not tenants)
@@ -84,7 +87,8 @@ New orders, order status changes, time-slot edits, and menu changes all propagat
 
 - One admin account = one tenant (no multi-business logins yet).
 - No email verification on signup, and no password-reset flow yet.
-- Time slots are a recurring daily list, not tied to a specific calendar date.
+- Time slots are a recurring daily list, not tied to a specific calendar date (closed-date overrides exist, but there's no way to give a single date different hours yet).
+- Option groups (modifiers) belong to one menu item each — there's no shared/reusable library, so a business re-creates a similar group (e.g. "Spice Level") on every item that needs it.
 - "Bank Transfer" payment shows a clearly-labeled empty QR placeholder — no real payment processing is wired up.
 - Live updates are polling-based (a few seconds of latency), not instant push.
 
