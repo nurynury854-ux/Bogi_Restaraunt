@@ -18,10 +18,19 @@ export async function POST(request: NextRequest) {
     const session = await requireAdminSession();
 
     if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      // The store may be connected under a different variable name than
+      // Vercel's usual default (e.g. a second store, or a manual rename) —
+      // surface whatever blob-token-shaped var actually exists so this is
+      // diagnosable from the error message alone, without dashboard access.
+      const similarNames = Object.keys(process.env).filter(
+        (k) => /BLOB/i.test(k) && /TOKEN/i.test(k)
+      );
       return NextResponse.json(
         {
           error:
-            "Image uploads aren't set up yet — connect Vercel Blob storage to this project (Vercel dashboard → Storage → Create Database → Blob) and redeploy.",
+            similarNames.length > 0
+              ? `Blob storage is connected, but as ${similarNames.join(", ")} instead of BLOB_READ_WRITE_TOKEN. Rename it to exactly BLOB_READ_WRITE_TOKEN in Vercel → Settings → Environment Variables, then redeploy.`
+              : "Image uploads aren't set up yet — connect Vercel Blob storage to this project (Vercel dashboard → Storage → Create Database → Blob) and redeploy.",
         },
         { status: 500 }
       );
