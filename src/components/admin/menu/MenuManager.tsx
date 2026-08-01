@@ -304,13 +304,17 @@ export function MenuManager({
 
         {addingCategory ? (
           <div className="flex items-center gap-1.5">
-            <Input
+            <input
               autoFocus
-              className="h-9 w-32"
               placeholder="Category name"
               value={newCategoryName}
               onChange={(e) => setNewCategoryName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && createCategory()}
+              // Plain <input>, not the shared <Input> — its baked-in h-11
+              // beats an h-9 override passed via className (Tailwind
+              // resolves same-specificity utility conflicts by order in the
+              // compiled stylesheet, not by class-attribute order).
+              className="h-9 w-32 rounded-xl border border-ink-100 bg-cream-50 px-3.5 text-sm text-ink-900 outline-none placeholder:text-ink-300 focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-200"
             />
             <button
               onClick={createCategory}
@@ -375,7 +379,6 @@ export function MenuManager({
                           />
                         </div>
                         <Textarea
-                          className="min-h-16"
                           placeholder="Description (optional)"
                           value={editingItem.description}
                           onChange={(e) =>

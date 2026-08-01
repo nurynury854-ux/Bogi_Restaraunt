@@ -3,8 +3,16 @@
 import { useState } from "react";
 import { Plus, Trash2, X, Check } from "lucide-react";
 import type { SerializedMenuItem } from "@/lib/types";
-import { Input } from "@/components/ui/Field";
 import { ToggleSwitch } from "@/components/ui/ToggleSwitch";
+
+// Plain <input> throughout this file rather than the shared <Input> —
+// <Input> bakes in h-11 (its default height) via a class string that a
+// className="h-8 ..." override doesn't reliably win against: Tailwind
+// resolves same-specificity utility conflicts by their order in the
+// compiled stylesheet, not by class-attribute order, so h-11 can (and did)
+// still win. Confirmed in the built CSS (h-11 declared after h-8).
+const fieldClass =
+  "rounded-lg border border-ink-100 bg-cream-50 px-2.5 text-sm text-ink-900 outline-none placeholder:text-ink-300 focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-200";
 
 /**
  * Inline editor for one menu item's option groups (Size, Spice Level,
@@ -209,20 +217,20 @@ export function ModifierGroupsEditor({
 
           {addingOptionFor === group.id ? (
             <div className="mt-2 flex items-center gap-1.5">
-              <Input
+              <input
                 autoFocus
-                className="h-8 flex-1 text-sm"
                 placeholder="Option name"
                 value={newOptionName}
                 onChange={(e) => setNewOptionName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && createOption(group.id)}
+                className={`h-8 flex-1 ${fieldClass}`}
               />
-              <Input
+              <input
                 type="number"
-                className="h-8 w-16 text-sm"
                 placeholder="+$"
                 value={newOptionPrice}
                 onChange={(e) => setNewOptionPrice(e.target.value)}
+                className={`h-8 w-16 ${fieldClass}`}
               />
               <button
                 onClick={() => createOption(group.id)}
@@ -252,13 +260,13 @@ export function ModifierGroupsEditor({
 
       {addingGroup ? (
         <div className="flex items-center gap-1.5">
-          <Input
+          <input
             autoFocus
-            className="h-9 flex-1 text-sm"
             placeholder="Group name (e.g. Size)"
             value={newGroupName}
             onChange={(e) => setNewGroupName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && createGroup()}
+            className={`h-9 flex-1 ${fieldClass}`}
           />
           <button
             onClick={createGroup}
