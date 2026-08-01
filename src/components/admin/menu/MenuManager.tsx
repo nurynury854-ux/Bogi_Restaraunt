@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, X, Check, Upload, UtensilsCrossed, ListPlus } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Check, Upload, UtensilsCrossed, ListPlus, CheckCircle2 } from "lucide-react";
 import type { SerializedMenuCategory, SerializedMenuItem } from "@/lib/types";
 import { usePolling } from "@/lib/hooks/usePolling";
 import { Card } from "@/components/ui/Card";
@@ -138,6 +138,10 @@ export function MenuManager({
 
   async function createItem() {
     if (!newItem.name.trim() || !selectedCategory) return;
+    if (uploadingNew) {
+      setError("Please wait for the photo to finish uploading first");
+      return;
+    }
     const price = Number(newItem.price);
     if (Number.isNaN(price) || price < 0) {
       setError("Please enter a valid price");
@@ -215,6 +219,10 @@ export function MenuManager({
 
   async function saveEdit() {
     if (!editingItem) return;
+    if (uploadingEdit) {
+      setError("Please wait for the photo to finish uploading first");
+      return;
+    }
     const price = Number(editingItem.price);
     if (Number.isNaN(price) || price < 0) {
       setError("Please enter a valid price");
@@ -402,7 +410,7 @@ export function MenuManager({
                         <Button size="sm" variant="ghost" onClick={() => setEditingItem(null)}>
                           Cancel
                         </Button>
-                        <Button size="sm" loading={busy} onClick={saveEdit}>
+                        <Button size="sm" loading={busy} disabled={uploadingEdit} onClick={saveEdit}>
                           Save
                         </Button>
                       </div>
@@ -511,7 +519,13 @@ export function MenuManager({
                 </FieldWrapper>
               </div>
             </div>
-            <Button size="sm" loading={busy} onClick={createItem} className="self-start">
+            <Button
+              size="sm"
+              loading={busy}
+              disabled={uploadingNew}
+              onClick={createItem}
+              className="self-start"
+            >
               <Plus className="size-4" />
               Add Item
             </Button>
@@ -533,29 +547,39 @@ function ImagePicker({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   return (
-    <button
-      type="button"
-      onClick={() => inputRef.current?.click()}
-      className="relative flex size-16 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-xl border border-dashed border-ink-200 bg-white text-ink-300 hover:border-brand-400 hover:text-brand-500"
-    >
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp,image/gif"
-        onChange={onChange}
-        className="hidden"
-      />
-      {imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={imageUrl} alt="" className="size-full object-cover" />
-      ) : (
-        <Upload className="size-5" />
-      )}
-      {uploading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white/70 text-xs">
-          ...
-        </div>
-      )}
-    </button>
+    <div className="flex shrink-0 flex-col items-center gap-1">
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        className="relative flex size-16 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-xl border border-dashed border-ink-200 bg-white text-ink-300 hover:border-brand-400 hover:text-brand-500"
+      >
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          onChange={onChange}
+          className="hidden"
+        />
+        {imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={imageUrl} alt="" className="size-full object-cover" />
+        ) : (
+          <Upload className="size-5" />
+        )}
+        {uploading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-white/70 text-xs text-ink-500">
+            Uploading...
+          </div>
+        )}
+        {imageUrl && !uploading && (
+          <span className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-success-500 text-white shadow-soft">
+            <CheckCircle2 className="size-3.5" />
+          </span>
+        )}
+      </button>
+      <p className="w-16 text-center text-[10px] leading-tight text-ink-400">
+        JPG, PNG, WebP, GIF · 5MB max
+      </p>
+    </div>
   );
 }

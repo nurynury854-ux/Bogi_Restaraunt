@@ -17,6 +17,16 @@ export async function POST(request: NextRequest) {
 
     const session = await requireAdminSession();
 
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      return NextResponse.json(
+        {
+          error:
+            "Image uploads aren't set up yet — connect Vercel Blob storage to this project (Vercel dashboard → Storage → Create Database → Blob) and redeploy.",
+        },
+        { status: 500 }
+      );
+    }
+
     const form = await request.formData();
     const file = form.get("file");
     if (!(file instanceof File)) {

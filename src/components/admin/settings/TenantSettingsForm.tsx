@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Upload } from "lucide-react";
+import { Upload, CheckCircle2 } from "lucide-react";
 import type { SerializedTenant } from "@/lib/types";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -72,20 +72,27 @@ export function TenantSettingsForm({ tenant }: { tenant: SerializedTenant }) {
         <Input value={businessName} onChange={(e) => setBusinessName(e.target.value)} required />
       </FieldWrapper>
 
-      <FieldWrapper label="Logo">
+      <FieldWrapper label="Logo" hint="JPG, PNG, WebP, or GIF · 5MB max">
         <div className="flex items-center gap-3">
-          {logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={logoUrl}
-              alt="Logo"
-              className="size-14 shrink-0 rounded-xl border border-ink-100 object-cover"
-            />
-          ) : (
-            <div className="flex size-14 shrink-0 items-center justify-center rounded-xl border border-dashed border-ink-200 text-ink-300">
-              <Upload className="size-5" />
-            </div>
-          )}
+          <div className="relative shrink-0">
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={logoUrl}
+                alt="Logo"
+                className="size-14 rounded-xl border border-ink-100 object-cover"
+              />
+            ) : (
+              <div className="flex size-14 items-center justify-center rounded-xl border border-dashed border-ink-200 text-ink-300">
+                <Upload className="size-5" />
+              </div>
+            )}
+            {logoUrl && !uploading && (
+              <span className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-success-500 text-white shadow-soft">
+                <CheckCircle2 className="size-3.5" />
+              </span>
+            )}
+          </div>
           <div>
             <input
               ref={fileInputRef}
@@ -149,7 +156,7 @@ export function TenantSettingsForm({ tenant }: { tenant: SerializedTenant }) {
 
       {error && <p className="text-sm text-danger-500">{error}</p>}
 
-      <Button size="sm" loading={saving} onClick={save} className="self-start">
+      <Button size="sm" loading={saving} disabled={uploading} onClick={save} className="self-start">
         Save Changes
       </Button>
     </Card>
