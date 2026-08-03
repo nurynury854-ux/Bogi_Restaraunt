@@ -37,10 +37,10 @@ export default async function AdminBranchSelectPage({
           <p className="mt-1 text-sm text-ink-500">Choose a location to manage</p>
           <Link
             href={`/${tenantSlug}/admin/settings`}
-            className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-ink-400 hover:text-brand-600"
+            className="mt-4 inline-flex h-11 items-center gap-2 rounded-xl border border-ink-100 bg-white px-5 text-sm font-medium text-ink-700 shadow-soft transition-colors hover:border-brand-300 hover:text-brand-600"
           >
-            <Settings className="size-3.5" />
-            Site settings
+            <Settings className="size-4" />
+            Site Settings
           </Link>
         </div>
         <AdminBranchCards
