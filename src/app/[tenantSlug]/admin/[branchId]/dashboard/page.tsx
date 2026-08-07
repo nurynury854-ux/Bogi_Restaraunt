@@ -2,20 +2,27 @@ import Link from "next/link";
 import { ShoppingBag, DollarSign, Receipt, Trophy, ChevronLeft, ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { bucketOrdersByMonth, parseMonthParam, monthParamOf } from "@/lib/analytics";
+import { getTenantBySlug } from "@/lib/tenant";
 import { Card } from "@/components/ui/Card";
 import { MonthlyBarChart } from "@/components/admin/dashboard/MonthlyBarChart";
+import { OnboardingChecklist, type OnboardingStep } from "@/components/admin/dashboard/OnboardingChecklist";
 
 export const dynamic = "force-dynamic";
+
+const PLACEHOLDER_ADDRESS = "Add your address";
+const PLACEHOLDER_PHONE = "Add your phone number";
+const PLACEHOLDER_HOURS = "Add your hours";
 
 export default async function DashboardPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ branchId: string }>;
+  params: Promise<{ tenantSlug: string; branchId: string }>;
   searchParams: Promise<{ month?: string }>;
 }) {
-  const { branchId } = await params;
+  const { tenantSlug, branchId } = await params;
   const { month: monthParam } = await searchParams;
+  const tenant = (await getTenantBySlug(tenantSlug))!;
 
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -32,19 +39,62 @@ export default async function DashboardPage({
   const nextHref = `?month=${monthParamOf(nextDate.getFullYear(), nextDate.getMonth() + 1)}`;
   const monthLabel = monthStart.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
-  const [todayCount, todayRevenueAgg, monthOrders] = await Promise.all([
-    prisma.order.count({
-      where: { branchId, createdAt: { gte: startOfToday, lt: startOfTomorrow } },
-    }),
-    prisma.order.aggregate({
-      where: { branchId, status: "COMPLETED", createdAt: { gte: startOfToday, lt: startOfTomorrow } },
-      _sum: { totalAmount: true },
-    }),
-    prisma.order.findMany({
-      where: { branchId, createdAt: { gte: monthStart, lt: monthEnd } },
-      select: { id: true, createdAt: true, status: true, totalAmount: true },
-    }),
-  ]);
+  const [todayCount, todayRevenueAgg, monthOrders, branch, categoryCount, itemCount] =
+    await Promise.all([
+      prisma.order.count({
+        where: { branchId, createdAt: { gte: startOfToday, lt: startOfTomorrow } },
+      }),
+      prisma.order.aggregate({
+        where: { branchId, status: "COMPLETED", createdAt: { gte: startOfToday, lt: startOfTomorrow } },
+        _sum: { totalAmount: true },
+      }),
+      prisma.order.findMany({
+        where: { branchId, createdAt: { gte: monthStart, lt: monthEnd } },
+        select: { id: true, createdAt: true, status: true, totalAmount: true },
+      }),
+      prisma.branch.findUnique({
+        where: { id: branchId },
+        select: { address: true, phone: true, hours: true },
+      }),
+      prisma.menuCategory.count({ where: { tenantId: tenant.id } }),
+      prisma.menuItem.count({ where: { tenantId: tenant.id } }),
+    ]);
+
+  const onboardingSteps: OnboardingStep[] = [
+    {
+      key: "logo",
+      label: "Upload your logo",
+      description: "Shows in your admin panel and re-themes your customer site",
+      done: !!tenant.logoUrl,
+      href: `/${tenantSlug}/admin/settings`,
+    },
+    {
+      key: "category",
+      label: "Add a menu category",
+      description: 'e.g. "Appetizers", "Drinks"',
+      done: categoryCount > 0,
+      href: `/${tenantSlug}/admin/${branchId}/menu`,
+    },
+    {
+      key: "item",
+      label: "Add a menu item",
+      description: "Customers can't order from an empty menu",
+      done: itemCount > 0,
+      href: `/${tenantSlug}/admin/${branchId}/menu`,
+    },
+    {
+      key: "hours",
+      label: "Set your location details",
+      description: "Address, phone, and hours — shown to customers before they order",
+      done:
+        !!branch &&
+        branch.address !== PLACEHOLDER_ADDRESS &&
+        branch.phone !== PLACEHOLDER_PHONE &&
+        branch.hours !== PLACEHOLDER_HOURS,
+      href: `/${tenantSlug}/admin/${branchId}/settings`,
+    },
+  ];
+  const onboardingComplete = onboardingSteps.every((s) => s.done);
 
   const completedMonthOrders = monthOrders.filter((o) => o.status === "COMPLETED");
   const monthRevenue = completedMonthOrders.reduce((sum, o) => sum + o.totalAmount, 0);
@@ -69,6 +119,8 @@ export default async function DashboardPage({
       <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold text-ink-900">
         Dashboard
       </h1>
+
+      {!onboardingComplete && <OnboardingChecklist steps={onboardingSteps} />}
 
       <div className="grid grid-cols-2 gap-4">
         <StatCard icon={ShoppingBag} label="Today's Orders" value={String(todayCount)} />
