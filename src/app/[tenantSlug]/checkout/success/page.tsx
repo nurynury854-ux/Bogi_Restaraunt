@@ -21,7 +21,17 @@ export default function CheckoutSuccessPage() {
       return;
     }
     // Deferred so the setState isn't synchronous within the effect body.
-    const id = setTimeout(() => setReady(true), 0);
+    // resetOrder() clears branchId/diningMethod/cart/paymentMethod — it
+    // happens here, once we're safely on the success page, rather than on
+    // the review page before navigating away. Clearing it there raced the
+    // navigation: if the review (or payment) page got a chance to re-render
+    // with the now-empty state before the route change fully took over, its
+    // own checkout guard saw no branch/dining-method selected and redirected
+    // to the tenant home page, hijacking the success page entirely.
+    const id = setTimeout(() => {
+      useOrderStore.getState().resetOrder();
+      setReady(true);
+    }, 0);
     return () => clearTimeout(id);
   }, [router, tenantSlug]);
 
