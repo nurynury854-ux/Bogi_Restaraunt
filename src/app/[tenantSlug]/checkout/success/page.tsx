@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, PackageSearch } from "lucide-react";
 import { useOrderStore } from "@/lib/store/orderStore";
 import { Button } from "@/components/ui/Button";
 
@@ -11,6 +11,7 @@ export default function CheckoutSuccessPage() {
   const router = useRouter();
   const { tenantSlug } = useParams<{ tenantSlug: string }>();
   const lastOrderNo = useOrderStore((s) => s.lastOrderNo);
+  const lastOrderId = useOrderStore((s) => s.lastOrderId);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -56,9 +57,23 @@ export default function CheckoutSuccessPage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.35, duration: 0.4 }}
-        className="mt-10"
+        className="mt-10 flex flex-col items-center gap-3"
       >
-        <Button size="lg" onClick={() => router.push(`/${tenantSlug}`)}>
+        {lastOrderId && (
+          <Button
+            size="lg"
+            variant="outline"
+            onClick={() => router.push(`/${tenantSlug}/orders/${lastOrderId}`)}
+          >
+            <PackageSearch className="size-4" />
+            Track Your Order
+          </Button>
+        )}
+        <Button
+          size="lg"
+          variant={lastOrderId ? "ghost" : "primary"}
+          onClick={() => router.push(`/${tenantSlug}`)}
+        >
           Back to Home
         </Button>
       </motion.div>

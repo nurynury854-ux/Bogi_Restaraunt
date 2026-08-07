@@ -59,12 +59,16 @@ yourdomain.com/signup           → create a new site
 yourdomain.com/{slug}/          → that tenant's customer ordering site
 yourdomain.com/{slug}/menu      → menu + cart
 yourdomain.com/{slug}/checkout/ → checkout flow
+yourdomain.com/{slug}/orders/   → track an order by number + phone
 yourdomain.com/{slug}/admin/    → that tenant's admin panel
 ```
 A reserved-word list (`admin`, `login`, `signup`, `api`, etc.) prevents a tenant from ever picking a slug that would collide with a platform route.
 
 ### Tenant isolation
 This is the part that matters most in a multi-tenant app. Every admin session is signed with the tenant it belongs to; visiting another tenant's `/admin` URL redirects to login rather than leaking anything. Every API route re-derives the tenant from the authenticated session (never trusts a tenant id from the request) and filters every query by it, and every "fetch by id" admin action (edit a branch, update a menu item, etc.) explicitly checks the fetched record's `tenantId` before allowing the read/write — so even guessing another tenant's internal ID doesn't work. This was verified directly (created two tenants, confirmed one's session/API calls cannot see or modify the other's branches, menu, or orders).
+
+### Order tracking (customer-facing)
+The checkout success page links straight to a live status page for that order; customers who lose the link can get back to it at `/{slug}/orders` with just their order number and the phone number they ordered under (the only "ownership" check available without a customer account system). The status page itself polls every few seconds, so it flips from "Being Prepared" to "Completed" automatically as staff work the order — no manual refresh, same live-update approach as everywhere else in the app. The tracking link uses the order's internal id (unguessable), not its order number (short and sequential per tenant, so guessable) — this is what keeps `/orders/{id}` from being browsable by iterating numbers.
 
 ### Admin panel (per tenant)
 - **Dashboard**: today's orders/revenue, a monthly overview with a `‹ month ›` picker (orders, revenue, average order value, a daily revenue chart), and that month's best sellers.

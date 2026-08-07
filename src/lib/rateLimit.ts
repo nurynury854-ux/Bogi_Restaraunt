@@ -68,6 +68,10 @@ export const RATE_LIMITS = {
   orderCreate: { limit: 20, windowMs: 60_000 },
   // Authenticated, but uploads hit paid blob storage, so still worth capping.
   upload: { limit: 30, windowMs: 60_000 },
+  // Public order lookup by order number + phone — no login, so this is the
+  // main brute-force surface (guessing phone numbers against a known order
+  // number, or vice versa). Generous enough for a customer fumbling digits.
+  orderLookup: { limit: 15, windowMs: 60_000 },
 } as const satisfies Record<string, RateLimitRule>;
 
 export function checkRateLimit(key: string, rule: RateLimitRule): RateLimitResult {

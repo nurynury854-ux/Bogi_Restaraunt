@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { PackageSearch } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getTenantBySlug } from "@/lib/tenant";
 import { BranchSelector } from "@/components/customer/BranchSelector";
@@ -33,6 +35,16 @@ export default async function TenantHomePage({
         </div>
 
         <BranchSelector tenantSlug={tenantSlug} branches={branches} />
+
+        <div className="mt-10 flex justify-center">
+          <Link
+            href={`/${tenantSlug}/orders`}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-500 hover:text-brand-600"
+          >
+            <PackageSearch className="size-4" />
+            Track an existing order
+          </Link>
+        </div>
       </div>
     </main>
   );

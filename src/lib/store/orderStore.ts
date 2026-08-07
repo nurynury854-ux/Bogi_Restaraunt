@@ -53,6 +53,7 @@ interface OrderState {
   customer: CustomerDetails;
   paymentMethod: PaymentMethod | null;
   lastOrderNo: string | null;
+  lastOrderId: string | null;
 
   selectBranch: (
     tenantSlug: string,
@@ -73,6 +74,7 @@ interface OrderState {
   setCustomerField: (field: keyof CustomerDetails, value: string) => void;
   setPaymentMethod: (method: PaymentMethod) => void;
   setLastOrderNo: (orderNo: string) => void;
+  setLastOrderId: (orderId: string) => void;
   resetOrder: () => void;
 }
 
@@ -112,6 +114,7 @@ export const useOrderStore = create<OrderState>()(
       customer: emptyCustomer,
       paymentMethod: null,
       lastOrderNo: null,
+      lastOrderId: null,
 
       selectBranch: (tenantSlug, branchId, branchName, diningMethod) =>
         set((state) => {
@@ -172,6 +175,7 @@ export const useOrderStore = create<OrderState>()(
       setPaymentMethod: (method) => set({ paymentMethod: method }),
 
       setLastOrderNo: (orderNo) => set({ lastOrderNo: orderNo }),
+      setLastOrderId: (orderId) => set({ lastOrderId: orderId }),
 
       resetOrder: () =>
         set({
@@ -196,6 +200,7 @@ export const useOrderStore = create<OrderState>()(
         customer: state.customer,
         paymentMethod: state.paymentMethod,
         lastOrderNo: state.lastOrderNo,
+        lastOrderId: state.lastOrderId,
       }),
     }
   )

@@ -20,6 +20,7 @@ export default function CheckoutReviewPage() {
   const customer = useOrderStore((s) => s.customer);
   const paymentMethod = useOrderStore((s) => s.paymentMethod);
   const setLastOrderNo = useOrderStore((s) => s.setLastOrderNo);
+  const setLastOrderId = useOrderStore((s) => s.setLastOrderId);
   const resetOrder = useOrderStore((s) => s.resetOrder);
 
   const [submitting, setSubmitting] = useState(false);
@@ -66,6 +67,7 @@ export default function CheckoutReviewPage() {
         return;
       }
       setLastOrderNo(data.order.orderNo);
+      setLastOrderId(data.order.id);
       resetOrder();
       router.push(`/${tenantSlug}/checkout/success`);
     } catch {

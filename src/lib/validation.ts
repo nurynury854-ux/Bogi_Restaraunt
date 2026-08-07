@@ -77,6 +77,12 @@ export const updateOrderStatusSchema = z.object({
   status: z.enum(ORDER_STATUSES),
 });
 
+export const orderLookupSchema = z.object({
+  tenantSlug: z.string().trim().min(1),
+  orderNo: z.string().trim().min(1, "Please enter your order number").max(40),
+  phone: phoneSchema,
+});
+
 export const branchCreateSchema = z.object({
   name: z.string().trim().min(1, "Please enter a location name").max(60),
   address: z.string().trim().min(1, "Please enter an address").max(160),
